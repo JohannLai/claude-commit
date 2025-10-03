@@ -11,8 +11,13 @@ jobs:
     # 只在非 tag 推送时运行，避免循环触发
     if: "!startsWith(github.ref, 'refs/tags/v') && !contains(github.event.head_commit.message, '[skip-release]')"
 
+    environment:
+      name: release
+      url: https://pypi.org/project/claude-commit/
+
     permissions:
       contents: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +29,25 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run lint checks
+        run: |
+          black --check src/
+          echo "✅ Code formatting check passed"
+
+      - name: Run type checks
+        run: |
+          mypy src/ || echo "⚠️ Type check warnings (non-blocking)"
+
+      - name: Test installation
+        run: |
+          claude-commit --help
+          echo "✅ Installation test passed"
 
       - name: Get current version
         id: current_version
@@ -162,6 +186,30 @@ jobs:
           body_path: release_notes.md
           draft: false
           prerelease: false
+
+      - name: Install build tools
+        if: steps.version_bump.outputs.bump_type != 'none'
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build package
+        if: steps.version_bump.outputs.bump_type != 'none'
+        run: python -m build
+
+      - name: Check package
+        if: steps.version_bump.outputs.bump_type != 'none'
+        run: twine check dist/*
+
+      - name: Publish to PyPI
+        if: steps.version_bump.outputs.bump_type != 'none'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # Uses trusted publishing if configured, otherwise falls back to API token
+        # To use trusted publishing: configure it in PyPI project settings
+        # To use API token: add PYPI_API_TOKEN secret to GitHub repository
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip-existing: true
 
       - name: No release needed
         if: steps.version_bump.outputs.bump_type == 'none'
