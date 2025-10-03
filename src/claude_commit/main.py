@@ -62,27 +62,56 @@ Analysis approach (you decide what's necessary):
 Commit message guidelines:
 - **FOLLOW THE EXISTING FORMAT**: Match the style, language, and conventions used in recent commits
 - If no clear pattern exists in history, use conventional commits format (feat:, fix:, docs:, refactor:, test:, chore:, style:, perf:)
-- First line: < 50 chars (or follow existing convention), imperative mood
+- First line: < 50 chars (or follow existing convention), imperative mood, summarize the main change
+- **IMPORTANT**: Use multi-line format with bullet points for detailed changes:
+  ```
+  type: brief summary (< 50 chars)
+  
+  - First change detail
+  - Second change detail
+  - Third change detail
+  ```
 - Be specific and meaningful (avoid vague terms like "update", "change", "modify")
 - Focus on WHAT changed and WHY (the intent), not HOW (implementation details)
-- If multiple logical changes, use multi-line format with bullet points (if that's the existing style)
 - Base your message on deep understanding, not just diff surface analysis
 
-Examples of excellent commit messages (conventional commits style):
-- "feat: add JWT-based authentication with refresh token support"
-- "fix: prevent memory leak in connection pool by closing idle connections"
-- "refactor: extract user validation logic into separate service"
-- "perf: optimize database queries by adding composite index on user_email"
+Examples of excellent commit messages (multi-line format):
 
-Examples with gitmoji:
-- "✨ add JWT-based authentication with refresh token support"
-- "🐛 fix memory leak in connection pool"
-- "♻️ extract user validation logic into separate service"
+Conventional commits style:
+```
+feat: add user authentication system
 
-Examples in Chinese:
-- "新增：JWT 身份验证和刷新令牌支持"
-- "修复：关闭空闲连接以防止连接池内存泄漏"
-- "重构：将用户验证逻辑提取到独立服务"
+- Implement JWT-based authentication with refresh tokens
+- Add login and registration endpoints
+- Create user session management
+- Add password hashing with bcrypt
+```
+
+```
+fix: prevent memory leak in connection pool
+
+- Close idle connections after timeout
+- Add connection limit configuration
+- Improve error handling for failed connections
+```
+
+With gitmoji:
+```
+✨ add user authentication system
+
+- Implement JWT-based authentication with refresh tokens
+- Add login and registration endpoints
+- Create user session management
+```
+
+In Chinese:
+```
+新增：用户认证系统
+
+- 实现基于 JWT 的身份验证和刷新令牌
+- 添加登录和注册接口
+- 创建用户会话管理
+```
 
 At the end of your analysis, output your final commit message in this format:
 
@@ -134,7 +163,18 @@ Your task:
 2. Investigate the changes thoroughly. Use whatever tools and commands you need.
 3. Understand the INTENT and IMPACT of the changes, not just the surface-level diff.
 4. Read relevant files to understand context and purpose.
-5. Generate a commit message that accurately reflects what changed and why, **IN THE SAME STYLE AS EXISTING COMMITS**.
+5. Generate a commit message in **MULTI-LINE FORMAT** with:
+   - First line: brief summary (< 50 chars)
+   - Empty line
+   - Bullet points (starting with "-") for detailed changes
+   Example:
+   ```
+   fix: correct formatting issue
+   
+   - Preserve empty lines in commit messages
+   - Update prompt to require multi-line format
+   - Add examples showing proper structure
+   ```
 
 Recommendations (not requirements - use your judgment):
 - Start with `git log -3 --oneline` to check the commit message style
