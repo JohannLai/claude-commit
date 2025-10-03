@@ -1,0 +1,173 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  auto-release:
+    runs-on: ubuntu-latest
+    # 只在非 tag 推送时运行，避免循环触发
+    if: "!startsWith(github.ref, 'refs/tags/v') && !contains(github.event.head_commit.message, '[skip-release]')"
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Get current version
+        id: current_version
+        run: |
+          VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Analyze commits and determine version bump
+        id: version_bump
+        run: |
+          # 获取上一个 tag（如果存在）
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          if [ -z "$LAST_TAG" ]; then
+            # 如果没有 tag，从第一个 commit 开始
+            COMMITS=$(git log --pretty=format:"%s")
+          else
+            # 获取自上次 tag 以来的所有 commits
+            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s")
+          fi
+
+          echo "Analyzing commits:"
+          echo "$COMMITS"
+
+          # 分析 commit messages 决定版本升级类型
+          BUMP_TYPE="none"
+
+          # 检查是否有 BREAKING CHANGE 或 feat!: / fix!: 等（major version）
+          if echo "$COMMITS" | grep -qiE '^[a-z]+(\(.+\))?!:|BREAKING[- ]CHANGE'; then
+            BUMP_TYPE="major"
+          # 检查是否有 feat: (minor version)
+          elif echo "$COMMITS" | grep -qiE '^feat(\(.+\))?:'; then
+            BUMP_TYPE="minor"
+          # 检查是否有 fix: / perf: / refactor: 等（patch version）
+          elif echo "$COMMITS" | grep -qiE '^(fix|perf|refactor|docs|style|test|build|ci|chore)(\(.+\))?:'; then
+            BUMP_TYPE="patch"
+          fi
+
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo "Determined bump type: $BUMP_TYPE"
+
+      - name: Calculate new version
+        id: new_version
+        if: steps.version_bump.outputs.bump_type != 'none'
+        run: |
+          CURRENT="${{ steps.current_version.outputs.version }}"
+          BUMP_TYPE="${{ steps.version_bump.outputs.bump_type }}"
+
+          # 解析当前版本
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          # 根据 bump type 计算新版本
+          case $BUMP_TYPE in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION (was: $CURRENT)"
+
+      - name: Update pyproject.toml
+        if: steps.version_bump.outputs.bump_type != 'none'
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" pyproject.toml
+          echo "Updated pyproject.toml to version $NEW_VERSION"
+
+      - name: Format code with black
+        if: steps.version_bump.outputs.bump_type != 'none'
+        run: |
+          pip install black
+          black src/
+
+      - name: Commit and push version bump
+        if: steps.version_bump.outputs.bump_type != 'none'
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml src/
+          git commit -m "chore: bump version to $NEW_VERSION [skip-ci][skip-release]" || exit 0
+          git push
+
+      - name: Create and push tag
+        if: steps.version_bump.outputs.bump_type != 'none'
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          git tag -a "v$NEW_VERSION" -m "Release version $NEW_VERSION"
+          git push origin "v$NEW_VERSION"
+
+      - name: Generate release notes
+        if: steps.version_bump.outputs.bump_type != 'none'
+        id: release_notes
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h)" HEAD^)
+          else
+            COMMITS=$(git log ${LAST_TAG}..HEAD^ --pretty=format:"- %s (%h)")
+          fi
+
+          # 生成 release notes
+          cat > release_notes.md <<EOF
+          ## What's Changed
+
+          $COMMITS
+
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/${LAST_TAG}...v${NEW_VERSION}
+          EOF
+
+          echo "Generated release notes"
+          cat release_notes.md
+
+      - name: Create GitHub Release
+        if: steps.version_bump.outputs.bump_type != 'none'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.new_version.outputs.version }}
+          release_name: Release v${{ steps.new_version.outputs.version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
+
+      - name: No release needed
+        if: steps.version_bump.outputs.bump_type == 'none'
+        run: |
+          echo "No version bump needed - no conventional commits found"
+          echo "Use commit messages like:"
+          echo "  - feat: add new feature (minor bump)"
+          echo "  - fix: fix a bug (patch bump)"
+          echo "  - feat!: breaking change (major bump)"

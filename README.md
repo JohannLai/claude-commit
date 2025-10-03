@@ -1,28 +1,10 @@
-# claude-commit
+# claude-commit [![PyPI version](https://badge.fury.io/py/claude-commit.svg)](https://badge.fury.io/py/claude-commit)
 
 🤖 AI-powered git commit message generator using Claude Agent SDK and Claude Code CLI
 
 ## What is this?
 
 `claude-commit` uses Claude AI to analyze your code changes and write meaningful commit messages. Claude reads your files, understands the context, and generates commit messages following best practices.
-
-## Quick Start
-
-**Install:**
-```bash
-pip install claude-commit
-
-# Required dependency
-npm install -g @anthropic-ai/claude-code
-```
-
-**Use:**
-```bash
-git add .
-claude-commit --commit
-```
-
-That's it! Claude will analyze your changes and create a commit.
 
 ## Installation
 
@@ -32,17 +14,42 @@ That's it! Claude will analyze your changes and create a commit.
 - Node.js
 - Git
 
-### Install Steps
+### Recommended: pipx (for CLI tools)
+
+`pipx` is the **best way to install Python CLI tools**. It creates isolated environments automatically:
 
 ```bash
-# 1. Install Claude Code CLI (required)
+# 1. Install pipx
+brew install pipx              # macOS
+# or
+pip install --user pipx        # Linux/Windows
+pipx ensurepath
+
+# 2. Install Claude Code CLI (required)
 npm install -g @anthropic-ai/claude-code
 
-# 2. Install claude-commit
-pip install claude-commit
-
-# Or use pipx for isolation
+# 3. Install claude-commit
 pipx install claude-commit
+```
+
+### Alternative: pip
+
+If you prefer pip, use one of these methods:
+
+**Option 1: User installation (no admin rights needed)**
+```bash
+# Install to user directory
+pip install --user claude-commit
+
+# Make sure ~/.local/bin is in your PATH
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+**Option 2: Virtual environment**
+```bash
+python3 -m venv ~/.venvs/claude-commit
+source ~/.venvs/claude-commit/bin/activate
+pip install claude-commit
 ```
 
 ### Authentication
@@ -109,7 +116,7 @@ Create shortcuts for common commands:
 # Install to your shell config
 claude-commit alias install
 
-# Activate in current terminal
+# Activate in current terminal. Very important!
 source ~/.zshrc    # zsh
 source ~/.bashrc   # bash
 ```
@@ -209,28 +216,103 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ## Troubleshooting
 
-**Claude Code not found?**
+### Fatal error in message reader: Command failed with exit code 1 (exit code: 1)
+
+```
+Fatal error in message reader: Command failed with exit code 1 (exit code: 1)
+Error output: Check stderr output for details
+Traceback (most recent call last):
+```
+
+**Solution**: This error means you haven't authenticated with Claude. Choose one method:
+
+**Method A: Official Claude Code login (recommended)**
+```bash
+claude
+```
+
+**Method B: Set custom API endpoint**
+```bash
+export ANTHROPIC_BASE_URL="https://your-endpoint.com/api/v1"
+export ANTHROPIC_AUTH_TOKEN="your-auth-token"
+# model name (optional)
+export ANTHROPIC_MODEL="your-model-name"
+
+# Add to ~/.zshrc or ~/.bashrc to persist
+echo 'export ANTHROPIC_BASE_URL="https://your-endpoint.com/api/v1"' >> ~/.zshrc
+echo 'export ANTHROPIC_AUTH_TOKEN="your-auth-token"' >> ~/.zshrc
+```
+
+### "externally-managed-environment" error (macOS/Linux)
+
+If you see this error when using `pip install`:
+
+```
+error: externally-managed-environment
+```
+
+**Solution**: Use `pipx` (recommended for CLI tools):
+```bash
+brew install pipx
+pipx install claude-commit
+```
+
+Or use `pip install --user`:
+```bash
+pip install --user claude-commit
+```
+
+**Why this happens**: Modern Python installations (Python 3.11+) protect the system Python to prevent conflicts. This is not a bug in `claude-commit`.
+
+### Claude Code not found
+
 ```bash
 npm install -g @anthropic-ai/claude-code
 ```
 
-**No changes detected?**
+### No changes detected
+
 ```bash
 git add .              # stage changes
 # or
 claude-commit --all    # include unstaged
 ```
 
-**Analysis too slow?**
+### Analysis too slow
+
 ```bash
 claude-commit --max-diff-lines 200
+```
+
+### Command not found after installation
+
+If `claude-commit` is not found after installation:
+
+**With pipx:**
+```bash
+pipx ensurepath
+# Restart your terminal
+```
+
+**With pip --user:**
+```bash
+# Add to ~/.zshrc or ~/.bashrc
+export PATH="$HOME/.local/bin:$PATH"
+source ~/.zshrc  # or ~/.bashrc
+```
+
+### Aliases not working
+
+```bash
+claude-commit alias install
+source ~/.zshrc  # or ~/.bashrc
 ```
 
 ## Development
 
 ```bash
 # Clone and setup
-git clone https://github.com/yourusername/claude-commit.git
+git clone https://github.com/JohannLai/claude-commit.git
 cd claude-commit
 python -m venv venv
 source venv/bin/activate
@@ -256,7 +338,9 @@ MIT License - see [LICENSE](LICENSE) file
 
 - [Claude Agent SDK](https://docs.anthropic.com/en/docs/claude-code/agent-sdk)
 - [Conventional Commits](https://www.conventionalcommits.org/)
-- [Issue Tracker](https://github.com/yourusername/claude-commit/issues)
+- [GitHub Repository](https://github.com/JohannLai/claude-commit)
+- [PyPI Package](https://pypi.org/project/claude-commit/)
+- [Issue Tracker](https://github.com/JohannLai/claude-commit/issues)
 
 ---
 
