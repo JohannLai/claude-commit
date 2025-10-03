@@ -226,26 +226,6 @@ claude-commit --all    # include unstaged
 claude-commit --max-diff-lines 200
 ```
 
-## API Usage
-
-Use as a Python library:
-
-```python
-from claude_commit import generate_commit_message
-from pathlib import Path
-import asyncio
-
-async def example():
-    message = await generate_commit_message(
-        repo_path=Path("."),
-        staged_only=True,
-        verbose=False
-    )
-    print(message)
-
-asyncio.run(example())
-```
-
 ## Development
 
 ```bash
@@ -280,4 +260,4 @@ MIT License - see [LICENSE](LICENSE) file
 
 ---
 
-Made with ❤️ using Claude AI
+Made with ❤️ by [Johann Lai](https://x.com/programerjohann)
