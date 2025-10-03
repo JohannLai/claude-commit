@@ -12,7 +12,6 @@ import argparse
 from pathlib import Path
 from typing import Optional
 import time
-import threading
 
 from claude_agent_sdk import (
     query,
@@ -26,41 +25,7 @@ from claude_agent_sdk import (
     ProcessError,
 )
 
-
-class Spinner:
-    """Simple spinner for showing progress."""
-    def __init__(self, message="Processing"):
-        self.message = message
-        self.running = False
-        self.thread = None
-        
-    def _spin(self):
-        """Spin animation."""
-        frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-        idx = 0
-        while self.running:
-            frame = frames[idx % len(frames)]
-            sys.stdout.write(f"\r{frame} {self.message}")
-            sys.stdout.flush()
-            time.sleep(0.1)
-            idx += 1
-        # Clear the line when done
-        sys.stdout.write("\r" + " " * (len(self.message) + 3) + "\r")
-        sys.stdout.flush()
-    
-    def start(self):
-        """Start the spinner."""
-        if not self.running:
-            self.running = True
-            self.thread = threading.Thread(target=self._spin, daemon=True)
-            self.thread.start()
-    
-    def stop(self):
-        """Stop the spinner."""
-        if self.running:
-            self.running = False
-            if self.thread:
-                self.thread.join(timeout=0.5)
+from .spinner import Spinner
 
 
 SYSTEM_PROMPT = """You are an expert software engineer tasked with analyzing code changes and writing excellent git commit messages.
@@ -74,27 +39,43 @@ Available tools you can use:
 - Glob: Find files matching patterns
 
 Analysis approach (you decide what's necessary):
-1. Start by examining what files changed (git status, git diff)
-2. For significant changes, READ the modified files to understand:
+1. IMPORTANT: First check recent commit history (git log -10 --oneline or git log -10 --pretty=format:"%s") to understand the existing commit message style
+   - Check if the project uses gitmoji (emojis like 🎉, ✨, 🐛, etc.)
+   - Check if messages are in Chinese, English, or other languages
+   - Check if they use conventional commits (feat:, fix:, etc.) or other formats
+   - Note any specific patterns or conventions used
+2. Examine what files changed (git status, git diff)
+3. For significant changes, READ the modified files to understand:
    - The purpose and context of changed functions/classes
    - How the changes fit into the larger codebase
    - The intent behind the modifications
-3. Search for related code (grep) to understand dependencies and impacts
-4. Check git history if needed to understand the change trajectory
+4. Search for related code (grep) to understand dependencies and impacts
 5. Consider the scope: is this a feature, fix, refactor, docs, chore, etc.?
 
 Commit message guidelines:
-- First line: < 50 chars, imperative mood, conventional commits format (feat:, fix:, docs:, refactor:, test:, chore:, style:, perf:)
+- **FOLLOW THE EXISTING FORMAT**: Match the style, language, and conventions used in recent commits
+- If no clear pattern exists in history, use conventional commits format (feat:, fix:, docs:, refactor:, test:, chore:, style:, perf:)
+- First line: < 50 chars (or follow existing convention), imperative mood
 - Be specific and meaningful (avoid vague terms like "update", "change", "modify")
 - Focus on WHAT changed and WHY (the intent), not HOW (implementation details)
-- If multiple logical changes, use multi-line format with bullet points
+- If multiple logical changes, use multi-line format with bullet points (if that's the existing style)
 - Base your message on deep understanding, not just diff surface analysis
 
-Examples of excellent commit messages:
+Examples of excellent commit messages (conventional commits style):
 - "feat: add JWT-based authentication with refresh token support"
 - "fix: prevent memory leak in connection pool by closing idle connections"
 - "refactor: extract user validation logic into separate service"
 - "perf: optimize database queries by adding composite index on user_email"
+
+Examples with gitmoji:
+- "✨ add JWT-based authentication with refresh token support"
+- "🐛 fix memory leak in connection pool"
+- "♻️ extract user validation logic into separate service"
+
+Examples in Chinese:
+- "新增：JWT 身份验证和刷新令牌支持"
+- "修复：关闭空闲连接以防止连接池内存泄漏"
+- "重构：将用户验证逻辑提取到独立服务"
 
 At the end of your analysis, output your final commit message in this format:
 
@@ -138,13 +119,19 @@ Context:
 - You have access to: Bash, Read, Grep, and Glob tools
 
 Your task:
-1. Investigate the changes thoroughly. Use whatever tools and commands you need.
-2. Understand the INTENT and IMPACT of the changes, not just the surface-level diff.
-3. Read relevant files to understand context and purpose.
-4. Generate a commit message that accurately reflects what changed and why.
+1. **FIRST**: Check the recent commit history (e.g., `git log -10 --oneline` or `git log -10 --pretty=format:"%s"`) to understand the commit message format/style used in this project
+   - Does it use gitmoji? (emojis like ✨, 🐛, ♻️, etc.)
+   - What language? (Chinese, English, etc.)
+   - What format? (conventional commits, custom format, etc.)
+   - **IMPORTANT**: You MUST follow the same style/format/language as the existing commits
+2. Investigate the changes thoroughly. Use whatever tools and commands you need.
+3. Understand the INTENT and IMPACT of the changes, not just the surface-level diff.
+4. Read relevant files to understand context and purpose.
+5. Generate a commit message that accurately reflects what changed and why, **IN THE SAME STYLE AS EXISTING COMMITS**.
 
 Recommendations (not requirements - use your judgment):
-- Start with `git status` and `git diff {"--cached" if staged_only else ""}` to see what changed
+- Start with `git log -10 --oneline` to check the commit message style
+- Then use `git status` and `git diff {"--cached" if staged_only else ""}` to see what changed
 - For non-trivial changes, READ the modified files to understand their purpose
 - Use grep to find related code or understand how functions are used
 - Consider the broader context of the codebase
@@ -178,7 +165,14 @@ Begin your analysis now.
         spinner_active = False
 
         async for message in query(prompt=prompt, options=options):
+            # Stop spinner when we get a message
+            if spinner_active:
+                spinner.stop()
+                spinner_active = False
+            
             if isinstance(message, AssistantMessage):
+                last_activity = time.time()
+                
                 for block in message.content:
                     if isinstance(block, TextBlock):
                         text = block.text.strip()
@@ -246,8 +240,17 @@ Begin your analysis now.
                             if len(result) > 200:
                                 result = result[:197] + "..."
                             print(f"     ↳ {result}")
+                
+                # After processing all blocks, start spinner if no output in non-verbose mode
+                if not verbose:
+                    spinner.start()
+                    spinner_active = True
 
             elif isinstance(message, ResultMessage):
+                # Stop spinner if it's running
+                if spinner_active:
+                    spinner.stop()
+                    spinner_active = False
                 print(f"\n✨ Analysis complete!")
                 if verbose:
                     if message.total_cost_usd:
@@ -291,19 +294,30 @@ Begin your analysis now.
                                 cleaned_lines.append(line.rstrip())
                         
                         commit_message = "\n".join(cleaned_lines).strip()
+        
+        # Make sure spinner is stopped before returning
+        if spinner_active:
+            spinner.stop()
 
         return commit_message
 
     except CLINotFoundError:
+        # Stop spinner on error
+        if 'spinner_active' in locals() and spinner_active:
+            spinner.stop()
         print("❌ Error: Claude Code CLI not found.", file=sys.stderr)
         print("📦 Please install it: npm install -g @anthropic-ai/claude-code", file=sys.stderr)
         return None
     except ProcessError as e:
+        if 'spinner_active' in locals() and spinner_active:
+            spinner.stop()
         print(f"❌ Process error: {e}", file=sys.stderr)
         if e.stderr:
             print(f"   stderr: {e.stderr}", file=sys.stderr)
         return None
     except Exception as e:
+        if 'spinner_active' in locals() and spinner_active:
+            spinner.stop()
         print(f"❌ Unexpected error: {e}", file=sys.stderr)
         if verbose:
             import traceback
