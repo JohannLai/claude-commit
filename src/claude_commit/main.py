@@ -130,7 +130,7 @@ Your task:
 5. Generate a commit message that accurately reflects what changed and why, **IN THE SAME STYLE AS EXISTING COMMITS**.
 
 Recommendations (not requirements - use your judgment):
-- Start with `git log -10 --oneline` to check the commit message style
+- Start with `git log -3 --oneline` to check the commit message style
 - Then use `git status` and `git diff {"--cached" if staged_only else ""}` to see what changed
 - For non-trivial changes, READ the modified files to understand their purpose
 - Use grep to find related code or understand how functions are used
