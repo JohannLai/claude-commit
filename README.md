@@ -1,435 +1,234 @@
 # claude-commit
 
-🤖 AI-powered git commit message generator using Claude Agent SDK
+🤖 AI-powered git commit message generator using Claude Agent SDK and Claude Code CLI
 
-## Overview
+## What is this?
 
-`claude-commit` is an **agentic AI tool** that deeply analyzes your git repository changes and generates meaningful, best-practice commit messages using Claude's AI capabilities. Unlike simple diff-to-text tools, Claude autonomously explores your codebase, reads relevant files, and understands the context and intent behind your changes.
+`claude-commit` uses Claude AI to analyze your code changes and write meaningful commit messages. Claude reads your files, understands the context, and generates commit messages following best practices.
 
-## Features
+## Quick Start
 
-- 🤖 **Agentic Analysis**: Claude autonomously decides what to investigate - reading files, searching code, understanding context
-- 🔍 **Deep Code Understanding**: Goes beyond surface-level diffs to understand purpose, relationships, and impact
-- 📋 **Best Practices**: Follows conventional commits format and git commit best practices
-- 🎯 **Intent-Based Messages**: Captures WHAT changed and WHY, not just HOW
-- 🔧 **Flexible Options**: Analyze staged changes or all changes
-- 📝 **Multiple Output Modes**: Preview, copy to clipboard, or auto-commit
-- 🚀 **Zero External Dependencies**: Uses only Claude's built-in tools (Bash, Read, Grep, Glob)
+**Install:**
+```bash
+pip install claude-commit
+
+# Required dependency
+npm install -g @anthropic-ai/claude-code
+```
+
+**Use:**
+```bash
+git add .
+claude-commit --commit
+```
+
+That's it! Claude will analyze your changes and create a commit.
 
 ## Installation
 
 ### Prerequisites
 
-1. **Python 3.10+**
-2. **Node.js**
-3. **Claude Code CLI** - Required for the SDK to work:
-   ```bash
-   npm install -g @anthropic-ai/claude-code
-   ```
-4. **Git** - Make sure git is installed and in your PATH
-   - macOS/Linux: Usually pre-installed
-   - Windows: Install [Git for Windows](https://git-scm.com/download/win)
+- Python 3.10+
+- Node.js
+- Git
 
-### Install claude-commit
+### Install Steps
 
-**Option 1: Install from PyPI (Recommended)**
 ```bash
+# 1. Install Claude Code CLI (required)
+npm install -g @anthropic-ai/claude-code
+
+# 2. Install claude-commit
 pip install claude-commit
 
-# Or use pipx for isolated installation
+# Or use pipx for isolation
 pipx install claude-commit
 ```
 
-**Option 2: Install from source**
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/claude-commit.git
-cd claude-commit
+### Authentication
 
-# Install in development mode
-pip install -e .
-```
+`claude-commit` supports two ways to authenticate with Claude:
 
-## Quick Start
+**Option 1: [Official Claude Code Login](https://docs.claude.com/en/docs/claude-code/quickstart#step-2%3A-log-in-to-your-account) (Recommended)**
 
-### First Time Setup
+**Option 2: Custom API Endpoint (Environment Variables)**
+
+For custom Claude API endpoints or proxies, set these environment variables:
 
 ```bash
-# 1. Install claude-commit (if not already installed)
-pip install claude-commit
+# Required: Set custom endpoint and credentials
+export ANTHROPIC_BASE_URL="https://your-endpoint.com/api/v1"
+export ANTHROPIC_AUTH_TOKEN="your-auth-token"
 
-# 2. Install shell aliases (optional but highly recommended)
-claude-commit alias install
+# Optional: Specify custom model name
+export ANTHROPIC_MODEL="your-model-name"
 
-# 3. Activate aliases in current shell
-source ~/.zshrc           # for zsh users (macOS/Linux)
-source ~/.bashrc          # for bash users (Linux/Git Bash)
-. $PROFILE                # for PowerShell users (Windows)
-
-# Done! Aliases will work automatically in all new terminals.
-```
-
-### Daily Usage
-
-```bash
-# Make your code changes, then:
-
-# Option 1: Quick commit (using alias)
-git add .
-ccc              # analyzes changes and commits
-
-# Option 2: Preview first
-git add .
-ccp              # preview the commit message
-ccc              # commit if satisfied
-
-# Option 3: Without aliases
-git add .
+# Then use claude-commit normally
 claude-commit --commit
 ```
+
+Add these to your `~/.zshrc` or `~/.bashrc` to persist across sessions.
 
 ## Usage
 
-### Basic Usage
+### Basic Commands
 
 ```bash
-# Analyze staged changes and generate commit message
+# Generate commit message (default: staged changes only)
 claude-commit
 
-# Analyze all changes (staged + unstaged)
+# Auto-commit with generated message
+claude-commit --commit
+
+# Include all changes (staged + unstaged)
 claude-commit --all
 
-# Show verbose output with analysis details
-claude-commit --verbose
-```
-
-### Advanced Usage
-
-```bash
-# Preview the message without any action
-claude-commit --preview
-
-# Copy generated message to clipboard
+# Copy message to clipboard
 claude-commit --copy
-
-# Automatically commit with the generated message
-claude-commit --commit
-
-# Specify a different repository path
-claude-commit --path /path/to/repo
-
-# Limit diff analysis (useful for large changes)
-claude-commit --max-diff-lines 300
 ```
 
-### Workflow Examples
+### Common Options
 
-**Standard workflow:**
+| Option               | Description                        |
+| -------------------- | ---------------------------------- |
+| `-a, --all`          | Include unstaged changes           |
+| `-c, --commit`       | Auto-commit with generated message |
+| `--copy`             | Copy message to clipboard          |
+| `--preview`          | Preview message only               |
+| `-v, --verbose`      | Show detailed analysis             |
+| `-p, --path PATH`    | Specify repository path            |
+| `--max-diff-lines N` | Limit diff lines (default: 500)    |
+
+## Aliases
+
+Create shortcuts for common commands:
+
+### Install Shell Aliases
+
 ```bash
-# Stage your changes
-git add .
+# Install to your shell config
+claude-commit alias install
 
-# Generate commit message
-claude-commit
-
-# Review and commit manually
-git commit -m "feat: add user authentication module"
+# Activate in current terminal
+source ~/.zshrc    # zsh
+source ~/.bashrc   # bash
 ```
-
-**Quick commit workflow:**
-```bash
-# Stage changes and auto-commit
-git add .
-claude-commit --commit
-```
-
-**Copy to clipboard workflow:**
-```bash
-# Generate and copy message
-claude-commit --copy
-
-# Then paste in your git client or IDE
-```
-
-## Command Line Options
-
-| Option               | Description                                            |
-| -------------------- | ------------------------------------------------------ |
-| `-a, --all`          | Analyze all changes, not just staged ones              |
-| `-v, --verbose`      | Show detailed analysis and processing information      |
-| `-p, --path PATH`    | Path to git repository (defaults to current directory) |
-| `--max-diff-lines N` | Maximum number of diff lines to analyze (default: 500) |
-| `-c, --commit`       | Automatically commit with the generated message        |
-| `--copy`             | Copy the generated message to clipboard                |
-| `--preview`          | Just preview the message without any action            |
-
-## Aliases (Like Git Aliases!)
-
-`claude-commit` supports command aliases just like git, making common commands shorter and easier to type.
 
 ### Default Aliases
 
-The tool comes with these pre-configured aliases (similar to popular git aliases like `gaa`):
+| Alias   | Command                        | Description         |
+| ------- | ------------------------------ | ------------------- |
+| `ccc`   | `claude-commit --commit`       | Quick commit        |
+| `ccp`   | `claude-commit --preview`      | Preview message     |
+| `cca`   | `claude-commit --all`          | Include all changes |
+| `ccac`  | `claude-commit --all --commit` | Commit all changes  |
+| `ccopy` | `claude-commit --copy`         | Copy to clipboard   |
 
-| Alias   | Expands to                         | Description           |
-| ------- | ---------------------------------- | --------------------- |
-| `cc`    | `claude-commit`                    | Base command          |
-| `cca`   | `claude-commit --all`              | Analyze all changes   |
-| `ccv`   | `claude-commit --verbose`          | Verbose mode          |
-| `ccc`   | `claude-commit --commit`           | Auto-commit           |
-| `ccp`   | `claude-commit --preview`          | Preview only          |
-| `ccac`  | `claude-commit --all --commit`     | Analyze all + commit  |
-| `ccav`  | `claude-commit --all --verbose`    | Analyze all + verbose |
-| `ccvc`  | `claude-commit --verbose --commit` | Verbose + commit      |
-| `ccopy` | `claude-commit --copy`             | Copy to clipboard     |
-
-### Using Aliases
-
-**Method 1: Within claude-commit command (works immediately)**
+After installation, just use:
 ```bash
-# Instead of typing the full command:
-claude-commit --all --verbose
-
-# Just use the alias:
-claude-commit cca
+git add .
+ccc  # analyzes and commits
 ```
 
-**Method 2: Install as shell aliases (use directly like 'ccc')**
+### Custom Aliases
 
 ```bash
-# Step 1: Install aliases to your shell config (~/.zshrc or ~/.bashrc)
-claude-commit alias install
-
-# Step 2: Activate in current shell
-source ~/.zshrc     # for zsh users
-source ~/.bashrc    # for bash users
-
-# Step 3: Now use aliases directly (just like git aliases!)
-ccc              # same as: claude-commit --commit
-cca              # same as: claude-commit --all
-ccac             # same as: claude-commit --all --commit
-```
-
-💡 **Tips**: 
-- Shell aliases work exactly like git aliases (`gaa`, `gc`, etc.)
-- After `claude-commit alias install`, aliases work automatically in **new terminal windows**
-- For your **current terminal**, activate with:
-  - Unix (zsh/bash): `source ~/.zshrc` or `source ~/.bashrc`
-  - PowerShell: `. $PROFILE` or restart PowerShell
-- Supports: **zsh, bash, fish** (macOS/Linux), **PowerShell, Git Bash** (Windows)
-
-### Managing Aliases
-
-**List all aliases:**
-```bash
+# Create your own aliases
+claude-commit alias set quick --all --commit
 claude-commit alias list
+claude-commit alias unset quick
 ```
 
-**Set a custom alias:**
+## How It Works
+
+Claude autonomously analyzes your changes:
+
+1. **Reads** your modified files to understand context
+2. **Searches** the codebase for related code
+3. **Understands** the intent and impact of changes
+4. **Generates** a clear commit message following conventions
+
+**Example:**
+```
+feat: add JWT authentication
+
+Implement secure authentication system with token refresh.
+Includes login, logout, and session management.
+```
+
+## Examples
+
+### Typical Workflow
+
 ```bash
-# Create a short alias for common workflow
-claude-commit alias set cca --all
-claude-commit alias set quick --all --commit --copy
+# Make changes
+git add .
 
-# Use your custom alias
-claude-commit quick
+# Preview message
+claude-commit --preview
+
+# Commit if satisfied
+claude-commit --commit
 ```
 
-**Remove an alias:**
+### With Aliases
+
 ```bash
-claude-commit alias unset cca
+# Make changes
+git add .
+
+# Quick commit
+ccc
 ```
 
-**Alias with additional arguments:**
+### Large Changes
+
 ```bash
-# Aliases can be combined with additional arguments
-claude-commit cca --verbose  # Expands to: claude-commit --all --verbose
-```
-
-### Configuration
-
-- **Alias definitions** are stored in `~/.claude-commit/config.json`
-- **Shell aliases** (when installed) are added to `~/.zshrc` or `~/.bashrc`
-- All aliases persist across sessions
-
-### No Conflicts with Git Aliases
-
-All `claude-commit` aliases start with `cc` prefix, so they won't conflict with common git aliases like:
-- `gaa` (git add --all)
-- `gc` (git commit)
-- `gca` (git commit --amend)
-- `gst` (git status)
-
-You can safely use both git and claude-commit aliases together!
-
-## Platform Support
-
-| Platform    | Status  | Shells Supported     | Clipboard  | Notes                        |
-| ----------- | ------- | -------------------- | ---------- | ---------------------------- |
-| **macOS**   | ✅ Full  | zsh, bash, fish      | ✅ `pbcopy` | Native support               |
-| **Linux**   | ✅ Full  | bash, zsh, fish      | ✅ `xclip`  | Requires xclip for clipboard |
-| **Windows** | ✅ Basic | PowerShell, Git Bash | ✅ `clip`   | PowerShell 5.1+ or Git Bash  |
-
-### Windows-Specific Notes
-
-**PowerShell Users:**
-- Aliases are installed as PowerShell functions in your `$PROFILE`
-- First time setup may require execution policy change:
-  ```powershell
-  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-  ```
-
-**Git Bash Users:**
-- Works exactly like macOS/Linux bash
-- Aliases installed to `~/.bashrc`
-
-**CMD Users:**
-- Core functionality works (generate commit messages)
-- Shell aliases not supported (use full commands)
-
-## How It Works (Agentic Approach)
-
-Unlike traditional tools that just format git diffs, `claude-commit` uses an **agentic approach** where Claude autonomously decides how to analyze your changes:
-
-1. **Initial Discovery**: Claude starts by running `git status` and `git diff` to see what changed
-2. **Autonomous Investigation**: Claude decides what additional context is needed:
-   - 📖 **Reads modified files** to understand their purpose and structure
-   - 🔍 **Searches the codebase** (grep) to find related functions, classes, or dependencies
-   - 🌳 **Explores file structure** (glob) to understand the project organization
-   - 📜 **Checks git history** to understand the change trajectory
-3. **Deep Understanding**: Claude analyzes:
-   - The *intent* behind the changes (not just what lines changed)
-   - How changes fit into the larger codebase
-   - The impact and relationships with other code
-4. **Generate Message**: Creates a commit message that captures:
-   - **WHAT** changed (the functionality)
-   - **WHY** it changed (the intent/purpose)
-   - Following best practices: imperative mood, conventional commits, clear and concise
-
-**Example of Claude's autonomous analysis:**
-```
-1. Sees changes in authentication.py
-2. Reads authentication.py to understand the auth system
-3. Greps for "JWT" to see how tokens are used elsewhere
-4. Reads related files like user_model.py for context
-5. Generates: "feat: add JWT-based authentication with refresh token support"
-```
-
-## Commit Message Examples
-
-**Feature addition:**
-```
-feat: add user authentication with JWT tokens
-
-Implement secure authentication system using JSON Web Tokens.
-Includes login, logout, and token refresh endpoints.
-```
-
-**Bug fix:**
-```
-fix: resolve memory leak in connection pool
-
-Connection objects were not being properly released back to the pool
-after failed queries, causing gradual memory exhaustion.
-```
-
-**Documentation:**
-```
-docs: update API documentation for v2 endpoints
-
-Add examples for new pagination parameters and response formats.
-Include migration guide from v1 to v2.
+# Limit analysis for faster results
+claude-commit --max-diff-lines 200 --commit
 ```
 
 ## Configuration
 
-### Claude Agent Options
+Configuration files:
+- Aliases: `~/.claude-commit/config.json`
+- Shell integration: `~/.zshrc`, `~/.bashrc`, or `$PROFILE`
 
-The tool uses these Claude Agent SDK options by default:
+## Platform Support
 
-```python
-ClaudeAgentOptions(
-    system_prompt=SYSTEM_PROMPT,  # Expert commit message writer
-    allowed_tools=["Bash", "Read", "Grep", "Glob"],
-    permission_mode="acceptEdits",
-    max_turns=10,
-)
-```
+| Platform | Status | Shells               |
+| -------- | ------ | -------------------- |
+| macOS    | ✅      | zsh, bash, fish      |
+| Linux    | ✅      | bash, zsh, fish      |
+| Windows  | ✅      | PowerShell, Git Bash |
 
-### Customization
-
-You can customize the behavior by modifying `src/claude_commit/main.py`:
-
-- **SYSTEM_PROMPT**: Adjust the AI's instructions for commit messages
-- **max_turns**: Change how many iterations Claude can use
-- **allowed_tools**: Add or remove tools Claude can use
-
-## Development
-
-### Setup Development Environment
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/claude-commit.git
-cd claude-commit
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install in development mode with dev dependencies
-pip install -e ".[dev]"
-```
-
-### Run Tests
-
-```bash
-pytest tests/
-```
-
-### Code Formatting
-
-```bash
-black src/ tests/
-```
-
-### Type Checking
-
-```bash
-mypy src/
+**Windows PowerShell** first-time setup:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 ## Troubleshooting
 
-### "Claude Code not found" Error
-
-If you see this error:
-```
-❌ Error: Claude Code CLI not found.
-📦 Please install it: npm install -g @anthropic-ai/claude-code
-```
-
-**Solution**: Install the Claude Code CLI:
+**Claude Code not found?**
 ```bash
 npm install -g @anthropic-ai/claude-code
 ```
 
-### "No changes detected" Error
+**No changes detected?**
+```bash
+git add .              # stage changes
+# or
+claude-commit --all    # include unstaged
+```
 
-**Solution**: Make sure you have either:
-- Staged changes: `git add <files>`
-- Use `--all` flag to analyze unstaged changes: `claude-commit --all`
-
-### Large Diffs Taking Too Long
-
-**Solution**: Limit the analysis scope:
+**Analysis too slow?**
 ```bash
 claude-commit --max-diff-lines 200
 ```
 
 ## API Usage
 
-You can also use `claude-commit` as a Python library:
+Use as a Python library:
 
 ```python
 from claude_commit import generate_commit_message
@@ -438,49 +237,47 @@ import asyncio
 
 async def example():
     message = await generate_commit_message(
-        repo_path=Path("/path/to/repo"),
+        repo_path=Path("."),
         staged_only=True,
-        verbose=True
+        verbose=False
     )
-    
-    if message:
-        print(f"Generated: {message}")
+    print(message)
 
 asyncio.run(example())
 ```
 
+## Development
+
+```bash
+# Clone and setup
+git clone https://github.com/yourusername/claude-commit.git
+cd claude-commit
+python -m venv venv
+source venv/bin/activate
+pip install -e ".[dev]"
+
+# Run tests
+pytest tests/
+```
+
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
+Contributions welcome! Please:
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Submit a Pull Request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file
 
-## Acknowledgments
+## Links
 
-- Built with [Claude Agent SDK](https://docs.anthropic.com/en/docs/claude-code/agent-sdk)
-- Inspired by best practices from the git community
-- Thanks to Anthropic for providing Claude AI
-
-## Related Projects
-
-- [Claude Agent SDK](https://github.com/anthropics/claude-code-sdk) - Official SDK for building Claude agents
-- [Conventional Commits](https://www.conventionalcommits.org/) - Commit message convention
-
-## Support
-
-- 📖 [Documentation](https://github.com/yourusername/claude-commit/wiki)
-- 🐛 [Issue Tracker](https://github.com/yourusername/claude-commit/issues)
-- 💬 [Discussions](https://github.com/yourusername/claude-commit/discussions)
+- [Claude Agent SDK](https://docs.anthropic.com/en/docs/claude-code/agent-sdk)
+- [Conventional Commits](https://www.conventionalcommits.org/)
+- [Issue Tracker](https://github.com/yourusername/claude-commit/issues)
 
 ---
 
 Made with ❤️ using Claude AI
-
