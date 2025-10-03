@@ -9,7 +9,7 @@ description = "AI-powered git commit message generator using Claude Agent SDK"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-authors = [{ name = "Johannlai", email = "johann_lai@outlook.com" }]
+authors = [{ name = "Johannlai", email = "johannli666@gmail.com" }]
 keywords = ["git", "commit", "ai", "claude", "automation"]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -22,7 +22,12 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
 ]
 
-dependencies = ["claude-agent-sdk>=0.1.0"]
+dependencies = [
+  "claude-agent-sdk>=0.1.0",
+  "click>=8.0.0",
+  "rich>=13.0.0",
+  "pyperclip>=1.8.0",
+]
 
 [project.optional-dependencies]
 dev = [

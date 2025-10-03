@@ -26,9 +26,21 @@
    ```bash
    npm install -g @anthropic-ai/claude-code
    ```
+4. **Git** - Make sure git is installed and in your PATH
+   - macOS/Linux: Usually pre-installed
+   - Windows: Install [Git for Windows](https://git-scm.com/download/win)
 
 ### Install claude-commit
 
+**Option 1: Install from PyPI (Recommended)**
+```bash
+pip install claude-commit
+
+# Or use pipx for isolated installation
+pipx install claude-commit
+```
+
+**Option 2: Install from source**
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/claude-commit.git
@@ -36,9 +48,44 @@ cd claude-commit
 
 # Install in development mode
 pip install -e .
+```
 
-# Or install from PyPI (once published)
+## Quick Start
+
+### First Time Setup
+
+```bash
+# 1. Install claude-commit (if not already installed)
 pip install claude-commit
+
+# 2. Install shell aliases (optional but highly recommended)
+claude-commit alias install
+
+# 3. Activate aliases in current shell
+source ~/.zshrc           # for zsh users (macOS/Linux)
+source ~/.bashrc          # for bash users (Linux/Git Bash)
+. $PROFILE                # for PowerShell users (Windows)
+
+# Done! Aliases will work automatically in all new terminals.
+```
+
+### Daily Usage
+
+```bash
+# Make your code changes, then:
+
+# Option 1: Quick commit (using alias)
+git add .
+ccc              # analyzes changes and commits
+
+# Option 2: Preview first
+git add .
+ccp              # preview the commit message
+ccc              # commit if satisfied
+
+# Option 3: Without aliases
+git add .
+claude-commit --commit
 ```
 
 ## Usage
@@ -115,6 +162,130 @@ claude-commit --copy
 | `-c, --commit`       | Automatically commit with the generated message        |
 | `--copy`             | Copy the generated message to clipboard                |
 | `--preview`          | Just preview the message without any action            |
+
+## Aliases (Like Git Aliases!)
+
+`claude-commit` supports command aliases just like git, making common commands shorter and easier to type.
+
+### Default Aliases
+
+The tool comes with these pre-configured aliases (similar to popular git aliases like `gaa`):
+
+| Alias   | Expands to                         | Description           |
+| ------- | ---------------------------------- | --------------------- |
+| `cc`    | `claude-commit`                    | Base command          |
+| `cca`   | `claude-commit --all`              | Analyze all changes   |
+| `ccv`   | `claude-commit --verbose`          | Verbose mode          |
+| `ccc`   | `claude-commit --commit`           | Auto-commit           |
+| `ccp`   | `claude-commit --preview`          | Preview only          |
+| `ccac`  | `claude-commit --all --commit`     | Analyze all + commit  |
+| `ccav`  | `claude-commit --all --verbose`    | Analyze all + verbose |
+| `ccvc`  | `claude-commit --verbose --commit` | Verbose + commit      |
+| `ccopy` | `claude-commit --copy`             | Copy to clipboard     |
+
+### Using Aliases
+
+**Method 1: Within claude-commit command (works immediately)**
+```bash
+# Instead of typing the full command:
+claude-commit --all --verbose
+
+# Just use the alias:
+claude-commit cca
+```
+
+**Method 2: Install as shell aliases (use directly like 'ccc')**
+
+```bash
+# Step 1: Install aliases to your shell config (~/.zshrc or ~/.bashrc)
+claude-commit alias install
+
+# Step 2: Activate in current shell
+source ~/.zshrc     # for zsh users
+source ~/.bashrc    # for bash users
+
+# Step 3: Now use aliases directly (just like git aliases!)
+ccc              # same as: claude-commit --commit
+cca              # same as: claude-commit --all
+ccac             # same as: claude-commit --all --commit
+```
+
+💡 **Tips**: 
+- Shell aliases work exactly like git aliases (`gaa`, `gc`, etc.)
+- After `claude-commit alias install`, aliases work automatically in **new terminal windows**
+- For your **current terminal**, activate with:
+  - Unix (zsh/bash): `source ~/.zshrc` or `source ~/.bashrc`
+  - PowerShell: `. $PROFILE` or restart PowerShell
+- Supports: **zsh, bash, fish** (macOS/Linux), **PowerShell, Git Bash** (Windows)
+
+### Managing Aliases
+
+**List all aliases:**
+```bash
+claude-commit alias list
+```
+
+**Set a custom alias:**
+```bash
+# Create a short alias for common workflow
+claude-commit alias set cca --all
+claude-commit alias set quick --all --commit --copy
+
+# Use your custom alias
+claude-commit quick
+```
+
+**Remove an alias:**
+```bash
+claude-commit alias unset cca
+```
+
+**Alias with additional arguments:**
+```bash
+# Aliases can be combined with additional arguments
+claude-commit cca --verbose  # Expands to: claude-commit --all --verbose
+```
+
+### Configuration
+
+- **Alias definitions** are stored in `~/.claude-commit/config.json`
+- **Shell aliases** (when installed) are added to `~/.zshrc` or `~/.bashrc`
+- All aliases persist across sessions
+
+### No Conflicts with Git Aliases
+
+All `claude-commit` aliases start with `cc` prefix, so they won't conflict with common git aliases like:
+- `gaa` (git add --all)
+- `gc` (git commit)
+- `gca` (git commit --amend)
+- `gst` (git status)
+
+You can safely use both git and claude-commit aliases together!
+
+## Platform Support
+
+| Platform    | Status  | Shells Supported     | Clipboard  | Notes                        |
+| ----------- | ------- | -------------------- | ---------- | ---------------------------- |
+| **macOS**   | ✅ Full  | zsh, bash, fish      | ✅ `pbcopy` | Native support               |
+| **Linux**   | ✅ Full  | bash, zsh, fish      | ✅ `xclip`  | Requires xclip for clipboard |
+| **Windows** | ✅ Basic | PowerShell, Git Bash | ✅ `clip`   | PowerShell 5.1+ or Git Bash  |
+
+### Windows-Specific Notes
+
+**PowerShell Users:**
+- Aliases are installed as PowerShell functions in your `$PROFILE`
+- First time setup may require execution policy change:
+  ```powershell
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+  ```
+
+**Git Bash Users:**
+- Works exactly like macOS/Linux bash
+- Aliases installed to `~/.bashrc`
+
+**CMD Users:**
+- Core functionality works (generate commit messages)
+- Shell aliases not supported (use full commands)
 
 ## How It Works (Agentic Approach)
 
