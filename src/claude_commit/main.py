@@ -310,7 +310,7 @@ Begin your analysis now.
                             if line.strip().startswith("```"):
                                 in_code_block = not in_code_block
                                 continue
-                            if not in_code_block and line.strip():
+                            if not in_code_block:
                                 cleaned_lines.append(line.rstrip())
                         
                         commit_message = "\n".join(cleaned_lines).strip()
