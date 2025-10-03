@@ -119,7 +119,7 @@ Context:
 - You have access to: Bash, Read, Grep, and Glob tools
 
 Your task:
-1. **FIRST**: Check the recent commit history (e.g., `git log -10 --oneline` or `git log -10 --pretty=format:"%s"`) to understand the commit message format/style used in this project
+1. **FIRST**: Check the recent commit history (e.g., `git log -3 --oneline` or `git log -3 --pretty=format:"%s"`) to understand the commit message format/style used in this project
    - Does it use gitmoji? (emojis like ✨, 🐛, ♻️, etc.)
    - What language? (Chinese, English, etc.)
    - What format? (conventional commits, custom format, etc.)
