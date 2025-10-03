@@ -11,6 +11,8 @@ import asyncio
 import argparse
 from pathlib import Path
 from typing import Optional
+import time
+import threading
 
 from claude_agent_sdk import (
     query,
@@ -23,6 +25,42 @@ from claude_agent_sdk import (
     CLINotFoundError,
     ProcessError,
 )
+
+
+class Spinner:
+    """Simple spinner for showing progress."""
+    def __init__(self, message="Processing"):
+        self.message = message
+        self.running = False
+        self.thread = None
+        
+    def _spin(self):
+        """Spin animation."""
+        frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        idx = 0
+        while self.running:
+            frame = frames[idx % len(frames)]
+            sys.stdout.write(f"\r{frame} {self.message}")
+            sys.stdout.flush()
+            time.sleep(0.1)
+            idx += 1
+        # Clear the line when done
+        sys.stdout.write("\r" + " " * (len(self.message) + 3) + "\r")
+        sys.stdout.flush()
+    
+    def start(self):
+        """Start the spinner."""
+        if not self.running:
+            self.running = True
+            self.thread = threading.Thread(target=self._spin, daemon=True)
+            self.thread.start()
+    
+    def stop(self):
+        """Stop the spinner."""
+        if self.running:
+            self.running = False
+            if self.thread:
+                self.thread.join(timeout=0.5)
 
 
 SYSTEM_PROMPT = """You are an expert software engineer tasked with analyzing code changes and writing excellent git commit messages.
@@ -129,10 +167,15 @@ Begin your analysis now.
         )
 
         if verbose:
-            print("🤖 Claude is analyzing your changes...")
+            print("🤖 Claude is analyzing your changes...\n")
+        else:
+            print("🤖 Analyzing changes...\n")
 
         commit_message = None
         all_text = []
+        spinner = Spinner("⏳ Waiting for response...")
+        last_activity = time.time()
+        spinner_active = False
 
         async for message in query(prompt=prompt, options=options):
             if isinstance(message, AssistantMessage):
@@ -142,8 +185,70 @@ Begin your analysis now.
                         all_text.append(text)
                         if verbose and text:
                             print(f"💭 {text}")
+                    
+                    elif isinstance(block, ToolUseBlock):
+                        # Show what tool Claude is using (simplified output)
+                        tool_name = block.name
+                        tool_input = block.input
+                        
+                        if tool_name == "Bash":
+                            cmd = tool_input.get("command", "")
+                            if verbose:
+                                description = tool_input.get("description", "")
+                                if description:
+                                    print(f"  🔧 {cmd}  # {description}")
+                                else:
+                                    print(f"  🔧 {cmd}")
+                            else:
+                                # Non-verbose: only show git commands and other important ones
+                                if cmd.startswith("git "):
+                                    print(f"  🔧 {cmd}")
+                                    
+                        elif tool_name == "Read":
+                            file_path = tool_input.get("file_path", "")
+                            if file_path:
+                                import os
+                                try:
+                                    rel_path = os.path.relpath(file_path, repo_path)
+                                    if verbose:
+                                        print(f"  📖 Reading {rel_path}")
+                                    else:
+                                        # Show just filename for non-verbose
+                                        if len(rel_path) > 45:
+                                            filename = os.path.basename(rel_path)
+                                            print(f"  📖 {filename}")
+                                        else:
+                                            print(f"  📖 {rel_path}")
+                                except:
+                                    filename = os.path.basename(file_path)
+                                    print(f"  📖 {filename}")
+                                    
+                        elif tool_name == "Grep":
+                            pattern = tool_input.get("pattern", "")
+                            path = tool_input.get("path", ".")
+                            if verbose:
+                                print(f"  🔍 Searching for '{pattern}' in {path}")
+                            elif pattern and len(pattern) <= 40:
+                                print(f"  🔍 {pattern}")
+                                
+                        elif tool_name == "Glob":
+                            pattern = tool_input.get("pattern", "")
+                            if pattern:
+                                if verbose:
+                                    print(f"  📁 Finding files matching {pattern}")
+                                else:
+                                    print(f"  📁 {pattern}")
+                    
+                    elif isinstance(block, ToolResultBlock):
+                        # Optionally show tool results in verbose mode
+                        if verbose and block.content:
+                            result = str(block.content)
+                            if len(result) > 200:
+                                result = result[:197] + "..."
+                            print(f"     ↳ {result}")
 
             elif isinstance(message, ResultMessage):
+                print(f"\n✨ Analysis complete!")
                 if verbose:
                     if message.total_cost_usd:
                         print(f"💰 Cost: ${message.total_cost_usd:.4f}")
@@ -364,4 +469,3 @@ Examples:
 
 if __name__ == "__main__":
     main()
-
