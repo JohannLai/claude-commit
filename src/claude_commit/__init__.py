@@ -9,4 +9,3 @@ __license__ = "MIT"
 from .main import generate_commit_message, main
 
 __all__ = ["generate_commit_message", "main"]
-

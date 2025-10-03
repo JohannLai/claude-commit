@@ -144,7 +144,9 @@ async def generate_commit_message(
 
     if verbose:
         console.print(f"[blue]🔍 Analyzing repository:[/blue] {repo_path}")
-        console.print(f"[blue]📝 Mode:[/blue] {'staged changes only' if staged_only else 'all changes'}")
+        console.print(
+            f"[blue]📝 Mode:[/blue] {'staged changes only' if staged_only else 'all changes'}"
+        )
 
     # Build the analysis prompt - give AI freedom to explore
     prompt = f"""Analyze the git repository changes and generate an excellent commit message.
@@ -197,7 +199,7 @@ Begin your analysis now.
             allowed_tools=["Bash", "Read", "Grep", "Glob"],
             permission_mode="acceptEdits",
             cwd=str(repo_path.absolute()),
-            max_turns=10
+            max_turns=10,
         )
 
         if verbose:
@@ -207,7 +209,7 @@ Begin your analysis now.
 
         commit_message = None
         all_text = []
-        
+
         # Use rich progress for spinner
         progress = None
         task_id = None
@@ -221,36 +223,39 @@ Begin your analysis now.
                     progress = None
                     task_id = None
                     spinner_started = False
-                
+
                 for block in message.content:
                     if isinstance(block, TextBlock):
                         text = block.text.strip()
                         all_text.append(text)
                         if verbose and text:
                             console.print(f"[dim]💭 {text}[/dim]")
-                    
+
                     elif isinstance(block, ToolUseBlock):
                         # Show what tool Claude is using (simplified output)
                         tool_name = block.name
                         tool_input = block.input
-                        
+
                         if tool_name == "Bash":
                             cmd = tool_input.get("command", "")
                             if verbose:
                                 description = tool_input.get("description", "")
                                 if description:
-                                    console.print(f"  [cyan]🔧 {cmd}[/cyan]  [dim]# {description}[/dim]")
+                                    console.print(
+                                        f"  [cyan]🔧 {cmd}[/cyan]  [dim]# {description}[/dim]"
+                                    )
                                 else:
                                     console.print(f"  [cyan]🔧 {cmd}[/cyan]")
                             else:
                                 # Non-verbose: only show git commands and other important ones
                                 if cmd.startswith("git "):
                                     console.print(f"  [cyan]🔧 {cmd}[/cyan]")
-                                    
+
                         elif tool_name == "Read":
                             file_path = tool_input.get("file_path", "")
                             if file_path:
                                 import os
+
                                 try:
                                     rel_path = os.path.relpath(file_path, repo_path)
                                     if verbose:
@@ -265,23 +270,27 @@ Begin your analysis now.
                                 except:
                                     filename = os.path.basename(file_path)
                                     console.print(f"  [yellow]📖 {filename}[/yellow]")
-                                    
+
                         elif tool_name == "Grep":
                             pattern = tool_input.get("pattern", "")
                             path = tool_input.get("path", ".")
                             if verbose:
-                                console.print(f"  [magenta]🔍 Searching for '{pattern}' in {path}[/magenta]")
+                                console.print(
+                                    f"  [magenta]🔍 Searching for '{pattern}' in {path}[/magenta]"
+                                )
                             elif pattern and len(pattern) <= 40:
                                 console.print(f"  [magenta]🔍 {pattern}[/magenta]")
-                                
+
                         elif tool_name == "Glob":
                             pattern = tool_input.get("pattern", "")
                             if pattern:
                                 if verbose:
-                                    console.print(f"  [blue]📁 Finding files matching {pattern}[/blue]")
+                                    console.print(
+                                        f"  [blue]📁 Finding files matching {pattern}[/blue]"
+                                    )
                                 else:
                                     console.print(f"  [blue]📁 {pattern}[/blue]")
-                    
+
                     elif isinstance(block, ToolResultBlock):
                         # Optionally show tool results in verbose mode
                         if verbose and block.content:
@@ -289,7 +298,7 @@ Begin your analysis now.
                             if len(result) > 200:
                                 result = result[:197] + "..."
                             console.print(f"     [dim]↳ {result}[/dim]")
-                
+
                 # After processing all blocks, start spinner if no output in non-verbose mode
                 # Only start spinner once, not on every message
                 if not verbose and not spinner_started:
@@ -321,7 +330,7 @@ Begin your analysis now.
                 if not message.is_error:
                     # Extract commit message from COMMIT_MESSAGE: marker
                     full_response = "\n".join(all_text)
-                    
+
                     # Look for COMMIT_MESSAGE: marker
                     if "COMMIT_MESSAGE:" in full_response:
                         # Extract everything after COMMIT_MESSAGE:
@@ -335,26 +344,33 @@ Begin your analysis now.
                             text = text.strip()
                             if text and not any(
                                 text.lower().startswith(prefix)
-                                for prefix in ["let me", "i'll", "i will", "now i", "first", "i can see"]
+                                for prefix in [
+                                    "let me",
+                                    "i'll",
+                                    "i will",
+                                    "now i",
+                                    "first",
+                                    "i can see",
+                                ]
                             ):
                                 commit_message = text
                                 break
-                    
+
                     # Clean up markdown code blocks if present
                     if commit_message:
                         lines = commit_message.split("\n")
                         cleaned_lines = []
                         in_code_block = False
-                        
+
                         for line in lines:
                             if line.strip().startswith("```"):
                                 in_code_block = not in_code_block
                                 continue
                             if not in_code_block:
                                 cleaned_lines.append(line.rstrip())
-                        
+
                         commit_message = "\n".join(cleaned_lines).strip()
-        
+
         # Make sure progress is stopped before returning
         if progress is not None and task_id is not None:
             progress.stop()
@@ -363,20 +379,23 @@ Begin your analysis now.
 
     except CLINotFoundError:
         # Stop progress on error
-        if 'progress' in locals() and progress is not None:
+        if "progress" in locals() and progress is not None:
             progress.stop()
         console.print("[red]❌ Error: Claude Code CLI not found.[/red]", file=sys.stderr)
-        console.print("[yellow]📦 Please install it: npm install -g @anthropic-ai/claude-code[/yellow]", file=sys.stderr)
+        console.print(
+            "[yellow]📦 Please install it: npm install -g @anthropic-ai/claude-code[/yellow]",
+            file=sys.stderr,
+        )
         return None
     except ProcessError as e:
-        if 'progress' in locals() and progress is not None:
+        if "progress" in locals() and progress is not None:
             progress.stop()
         console.print(f"[red]❌ Process error: {e}[/red]", file=sys.stderr)
         if e.stderr:
             console.print(f"   stderr: {e.stderr}", file=sys.stderr)
         return None
     except Exception as e:
-        if 'progress' in locals() and progress is not None:
+        if "progress" in locals() and progress is not None:
             progress.stop()
         console.print(f"[red]❌ Unexpected error: {e}[/red]", file=sys.stderr)
         if verbose:
@@ -392,44 +411,44 @@ def handle_alias_command(args):
         # List all aliases
         config = Config()
         aliases = config.list_aliases()
-        
+
         if not aliases:
             print("📋 No aliases configured")
             return
-        
+
         print("📋 Configured aliases:")
         print()
         max_alias_len = max(len(alias) for alias in aliases.keys())
-        
+
         for alias, command in sorted(aliases.items()):
             if command:
                 print(f"  {alias:<{max_alias_len}} → claude-commit {command}")
             else:
                 print(f"  {alias:<{max_alias_len}} → claude-commit")
-        
+
         print()
         print("💡 Usage: claude-commit <alias> [additional args]")
         print("   Example: claude-commit cca  (expands to: claude-commit --all)")
         print()
         print("🔧 To use aliases directly in shell (like 'ccc' instead of 'claude-commit ccc'):")
         print("   Run: claude-commit alias install")
-    
+
     elif args[0] == "install":
         # Install shell aliases
         config = Config()
         aliases = config.list_aliases()
-        
+
         if not aliases:
             print("📋 No aliases configured")
             return
-        
+
         import platform
         import os
-        
+
         # Detect shell and platform
         shell = os.environ.get("SHELL", "")
         system = platform.system()
-        
+
         # Windows detection
         if system == "Windows":
             # Check if running in Git Bash (has SHELL env var on Windows)
@@ -443,9 +462,19 @@ def handle_alias_command(args):
                 ps_profile = os.environ.get("USERPROFILE", "")
                 if ps_profile:
                     # PowerShell 7+ or Windows PowerShell
-                    rc_file = Path(ps_profile) / "Documents" / "WindowsPowerShell" / "Microsoft.PowerShell_profile.ps1"
+                    rc_file = (
+                        Path(ps_profile)
+                        / "Documents"
+                        / "WindowsPowerShell"
+                        / "Microsoft.PowerShell_profile.ps1"
+                    )
                     # Also check PowerShell 7+
-                    ps7_profile = Path(ps_profile) / "Documents" / "PowerShell" / "Microsoft.PowerShell_profile.ps1"
+                    ps7_profile = (
+                        Path(ps_profile)
+                        / "Documents"
+                        / "PowerShell"
+                        / "Microsoft.PowerShell_profile.ps1"
+                    )
                     if ps7_profile.parent.exists():
                         rc_file = ps7_profile
                     shell_name = "powershell"
@@ -488,7 +517,7 @@ def handle_alias_command(args):
                 else:
                     print(f"   alias {alias}='claude-commit'")
             return
-        
+
         # Generate alias commands (different syntax for PowerShell)
         if shell_name == "powershell":
             alias_lines = ["", "# claude-commit aliases (auto-generated)"]
@@ -508,13 +537,13 @@ def handle_alias_command(args):
                 else:
                     alias_lines.append(f"alias {alias}='claude-commit'")
             alias_lines.append("")
-        
+
         alias_block = "\n".join(alias_lines)
-        
+
         print(f"📝 Generated shell aliases for {shell_name}:")
         print(alias_block)
         print()
-        
+
         # Check if aliases already exist
         if rc_file.exists():
             content = rc_file.read_text()
@@ -524,7 +553,7 @@ def handle_alias_command(args):
                 if response == "n" or response == "no":
                     print("❌ Installation cancelled")
                     return
-                
+
                 # Remove old aliases
                 lines = content.split("\n")
                 new_lines = []
@@ -534,25 +563,25 @@ def handle_alias_command(args):
                         skip = True
                     elif skip and (line.strip() == "" or not line.startswith("alias ")):
                         skip = False
-                    
+
                     if not skip:
                         new_lines.append(line)
-                
+
                 content = "\n".join(new_lines)
         else:
             content = ""
-        
+
         # Append new aliases
         new_content = content.rstrip() + alias_block + "\n"
-        
+
         try:
             # Ensure directory exists (especially for PowerShell profile)
             rc_file.parent.mkdir(parents=True, exist_ok=True)
-            
+
             rc_file.write_text(new_content)
             print(f"✅ Aliases installed to {rc_file}")
             print()
-            
+
             # Show activation instructions (different for PowerShell)
             if shell_name == "powershell":
                 print("📋 To activate aliases in your current PowerShell session, run:")
@@ -569,20 +598,22 @@ def handle_alias_command(args):
                 print(f"   \033[1;36msource {rc_file}\033[0m")
                 print()
                 print("Or copy and paste this command:")
-                print(f"   \033[1;32msource {rc_file} && echo '✅ Aliases activated! Try: ccc'\033[0m")
+                print(
+                    f"   \033[1;32msource {rc_file} && echo '✅ Aliases activated! Try: ccc'\033[0m"
+                )
             print()
             print("💡 Aliases will be automatically available in new terminal windows.")
         except Exception as e:
             print(f"❌ Failed to write to {rc_file}: {e}", file=sys.stderr)
             sys.exit(1)
-    
+
     elif args[0] == "uninstall":
         # Remove shell aliases
         import platform
         import os
-        
+
         shell = os.environ.get("SHELL", "")
-        
+
         if "zsh" in shell:
             rc_file = Path.home() / ".zshrc"
         elif "bash" in shell:
@@ -594,33 +625,33 @@ def handle_alias_command(args):
         else:
             print(f"⚠️  Unknown shell: {shell}")
             return
-        
+
         if not rc_file.exists():
             print(f"❌ {rc_file} not found")
             return
-        
+
         content = rc_file.read_text()
-        
+
         if "# claude-commit aliases" not in content:
             print(f"📋 No claude-commit aliases found in {rc_file}")
             return
-        
+
         # Remove aliases block
         lines = content.split("\n")
         new_lines = []
         skip = False
         removed = False
-        
+
         for line in lines:
             if "# claude-commit aliases" in line:
                 skip = True
                 removed = True
             elif skip and (line.strip() == "" or not line.startswith("alias ")):
                 skip = False
-            
+
             if not skip:
                 new_lines.append(line)
-        
+
         if removed:
             rc_file.write_text("\n".join(new_lines))
             print(f"✅ Aliases removed from {rc_file}")
@@ -629,41 +660,41 @@ def handle_alias_command(args):
             print(f"   source {rc_file}")
             print()
             print("   Or open a new terminal window.")
-        
+
     elif args[0] == "set":
         # Set an alias
         if len(args) < 2:
             print("❌ Error: Please provide alias name", file=sys.stderr)
             print("   Usage: claude-commit alias set <name> [command]", file=sys.stderr)
             sys.exit(1)
-        
+
         alias_name = args[1]
         command = " ".join(args[2:]) if len(args) > 2 else ""
-        
+
         config = Config()
         config.set_alias(alias_name, command)
-        
+
         if command:
             print(f"✅ Alias '{alias_name}' set to: claude-commit {command}")
         else:
             print(f"✅ Alias '{alias_name}' set to: claude-commit")
-        
+
     elif args[0] == "unset":
         # Delete an alias
         if len(args) < 2:
             print("❌ Error: Please provide alias name", file=sys.stderr)
             print("   Usage: claude-commit alias unset <name>", file=sys.stderr)
             sys.exit(1)
-        
+
         alias_name = args[1]
         config = Config()
-        
+
         if config.delete_alias(alias_name):
             print(f"✅ Alias '{alias_name}' removed")
         else:
             print(f"❌ Alias '{alias_name}' not found", file=sys.stderr)
             sys.exit(1)
-    
+
     else:
         print(f"❌ Unknown alias command: {args[0]}", file=sys.stderr)
         print("   Available commands: list, set, unset, install, uninstall", file=sys.stderr)
@@ -696,15 +727,15 @@ def main():
     if config.is_first_run() and len(sys.argv) > 1 and sys.argv[1] not in ["alias", "-h", "--help"]:
         show_first_run_tip()
         config.mark_first_run_complete()
-    
+
     # Check if first argument is 'alias' command
     if len(sys.argv) > 1 and sys.argv[1] == "alias":
         handle_alias_command(sys.argv[2:])
         return
-    
+
     # Resolve any aliases in the arguments
     resolved_args = resolve_alias(sys.argv[1:])
-    
+
     parser = argparse.ArgumentParser(
         description="Generate AI-powered git commit messages using Claude",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -816,12 +847,14 @@ Alias Management:
 
     # Display the generated message with rich formatting
     console.print()
-    console.print(Panel(
-        commit_message,
-        title="[bold]📝 Generated Commit Message[/bold]",
-        border_style="green",
-        padding=(1, 2)
-    ))
+    console.print(
+        Panel(
+            commit_message,
+            title="[bold]📝 Generated Commit Message[/bold]",
+            border_style="green",
+            padding=(1, 2),
+        )
+    )
 
     # Handle different output modes
     if args.preview:
@@ -833,14 +866,20 @@ Alias Management:
             pyperclip.copy(commit_message)
             console.print("\n[green]✅ Commit message copied to clipboard![/green]")
         except Exception as e:
-            console.print(f"\n[yellow]⚠️  Failed to copy to clipboard: {e}[/yellow]", file=sys.stderr)
+            console.print(
+                f"\n[yellow]⚠️  Failed to copy to clipboard: {e}[/yellow]", file=sys.stderr
+            )
 
     if args.commit:
         try:
             import subprocess
 
             # Confirm before committing
-            response = console.input("\n[yellow]❓ Commit with this message? [Y/n]:[/yellow] ").strip().lower()
+            response = (
+                console.input("\n[yellow]❓ Commit with this message? [Y/n]:[/yellow] ")
+                .strip()
+                .lower()
+            )
             if response == "n" or response == "no":
                 console.print("[red]❌ Commit cancelled[/red]")
                 return
