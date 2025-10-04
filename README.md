@@ -6,6 +6,10 @@
 
 `claude-commit` uses Claude AI to analyze your code changes and write meaningful commit messages. Claude reads your files, understands the context, and generates commit messages following best practices.
 
+## Demo
+
+[![asciicast](https://asciinema.org/a/xxxxx.svg)](https://asciinema.org/a/xxxxx)
+
 ## Installation
 
 ### Prerequisites
