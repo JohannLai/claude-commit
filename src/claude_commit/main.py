@@ -237,51 +237,47 @@ async def generate_commit_message(
 </context>
 
 <task>
-1. **FIRST**: Check the recent commit history (e.g., `git log -3 --oneline` or `git log -3 --pretty=format:"%s"`) to understand the commit message format/style used in this project
-   - Does it use gitmoji? (emojis like ✨, 🐛, ♻️, etc.)
-   - What language? (Chinese, English, etc.)
-   - What format? (conventional commits, custom format, etc.)
-   - **IMPORTANT**: You MUST follow the same style/format/language as the existing commits
+Follow these steps to generate an excellent commit message:
 
-2. Investigate the changes thoroughly. Use whatever tools and commands you need.
+1. **Check commit history style** (choose ONE approach):
+   - Run `git log -3 --oneline` to see recent commits
+   - This shows you: gitmoji usage, language (Chinese/English), format (conventional commits, etc.)
+   - **MUST follow the same style/format/language as existing commits**
 
-3. Understand the INTENT and IMPACT of the changes, not just the surface-level diff.
+2. **Analyze the changes**:
+   - Run `git status` to see which files changed
+   - Run `git diff --stat` first to get an overview (shows file names and line counts)
+   - Only run full `git diff` if you need to see detailed changes
+   - **IMPORTANT**: If diff is large (>{max_diff_lines} lines), use targeted strategies below instead
 
-4. Read relevant files to understand context and purpose.
+3. **Understand the context** (use efficiently):
+   - For significant changes, READ modified files to understand their purpose
+   - Use GREP to understand code relationships WITHOUT reading entire files
+   - Use GLOB to find related files if needed
 
-5. Generate a commit message in **MULTI-LINE FORMAT** with:
-   - First line: brief summary (< 50 chars)
-   - Empty line
-   - Bullet points (starting with "-") for detailed changes
-   Example:
+4. **Generate the commit message** in MULTI-LINE FORMAT:
    ```
-   fix: correct formatting issue
+   type: brief summary (< 50 chars)
    
-   - Preserve empty lines in commit messages
-   - Update prompt to require multi-line format
-   - Add examples showing proper structure
+   - First change detail
+   - Second change detail
+   - Third change detail
    ```
 </task>
 
-<recommendations>
-Use your judgment on what's necessary:
+<efficient_strategies>
+**For large diffs** (>{max_diff_lines} lines):
+- Use `git diff --stat` for overview, then `git diff <specific_file>` for key files only
+- Use `grep` to search for specific patterns instead of reading full diff
+- Focus on the most impactful changes first
 
-- Start with `git log -3 --oneline` to check the commit message style
-- Then use `git status` and `git diff {"--cached" if staged_only else ""}` to see what changed
-- **If diff output is large (>{max_diff_lines} lines)**, use these strategies:
-  * Run `git diff --stat` for an overview of changed files
-  * Use `git diff <specific_file>` to analyze files individually
-  * Use `grep` to search for specific patterns instead of reading full diff
-  * Focus on the most significant changes first
-- For non-trivial changes, READ the modified files to understand their purpose
-- **USE GREP extensively** to understand impact and context:
-  * If a function was modified, grep for its usage: `grep -n "function_name("` 
-  * If a class was added/changed, find related classes: `grep -n "class.*Base"` or similar patterns
-  * If imports changed, see where they're used: `grep -n "imported_module"`
-  * To understand scope, count usages: `grep --output_mode count "pattern"`
-  * Get context around matches: `grep -C 3 "pattern"` (3 lines before/after)
-- Consider the broader context of the codebase
-</recommendations>
+**Use GREP extensively** to understand code relationships:
+- Modified function `process_data()`? → `grep -n "process_data("` to see where it's called
+- New class `UserManager`? → `grep -n "class.*Manager"` to find similar patterns  
+- Imports changed? → `grep -n "from new_module import"` to see usage
+- Want context? → `grep -C 3 "function_name"` to see surrounding code
+- Count usage? → `grep --output_mode count "pattern"` to understand scope
+</efficient_strategies>
 
 <output>
 When you're confident you understand the changes, output your commit message in this exact format:
