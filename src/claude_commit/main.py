@@ -40,10 +40,42 @@ SYSTEM_PROMPT = """You are an expert software engineer tasked with analyzing cod
 Your goal: Generate a clear, accurate, and meaningful commit message that captures the essence of the changes.
 
 Available tools you can use:
-- Bash: Run git commands (git diff, git status, git log, etc.) and other shell commands
-- Read: Read any file in the repository to understand context
-- Grep: Search for patterns across files to understand relationships
-- Glob: Find files matching patterns
+
+1. **Bash**: Run git commands and shell commands
+   - `git log`, `git status`, `git diff`, `git show`
+   - Any shell commands for system inspection
+
+2. **Read**: Read file contents to understand context
+   - Read modified files to understand their purpose
+   - Read related files to understand dependencies
+   - Can specify line ranges for large files: `{"file_path": "file.py", "offset": 10, "limit": 50}`
+   - Supports images (returns base64 encoded data)
+
+3. **Grep** (⭐ POWERFUL - use extensively!): Search patterns across files
+   - Search for function/class definitions: `grep -n "def function_name"` or `grep -n "class ClassName"`
+   - Find where functions are called: `grep -n "function_name("`
+   - Search for imports: `grep -n "from module import"` or `grep -n "import package"`
+   - Find variable usage: `grep -n "variable_name"`
+   - Search with context: use -A (after), -B (before), -C (context) flags
+   - Case-insensitive search: use -i flag
+   - Search in specific file types: use --type flag (e.g., `--type py`)
+   - Count occurrences: use --output_mode count
+   - Limit results: use head_limit parameter
+   - **Why Grep is powerful**: It helps you understand code relationships WITHOUT reading entire files
+     * See where a modified function is called (usage impact)
+     * Find related functions or classes (context)
+     * Understand dependencies (imports and references)
+     * Discover patterns across the codebase
+
+4. **Glob**: Find files matching patterns
+   - `*.py`, `**/*.js`, `**/test_*.py`
+   - Useful to find related files (e.g., test files, config files)
+
+5. **Edit** (⭐ USEFUL for analysis): Make precise edits
+   - **NOTE**: You won't actually edit files, but you can use this tool's pattern matching to understand complex changes
+   - Helps identify exact strings in files when git diff is unclear
+   - Can search for specific code patterns: `{"file_path": "file.py", "old_string": "pattern to find"}`
+   - Useful when you need to understand multi-line changes or context around changes
 
 Analysis approach (you decide what's necessary):
 1. IMPORTANT: First check recent commit history (git log -10 --oneline or git log -10 --pretty=format:"%s") to understand the existing commit message style
@@ -56,8 +88,16 @@ Analysis approach (you decide what's necessary):
    - The purpose and context of changed functions/classes
    - How the changes fit into the larger codebase
    - The intent behind the modifications
-4. Search for related code (grep) to understand dependencies and impacts
+4. **USE GREP extensively** to understand code relationships (examples):
+   - Modified function `process_data()`? → `grep -n "process_data("` to see where it's called
+   - New class `UserManager`? → `grep -n "class.*Manager"` to find similar patterns
+   - Imports changed? → `grep -n "from new_module import"` to see usage
+   - Refactoring? → `grep --output_mode count "old_pattern"` to understand scope
+   - Want context? → `grep -C 5 "function_name"` to see surrounding code
+   - Find test files? → `grep -n "test_function_name"` or use glob `**/test_*.py`
 5. Consider the scope: is this a feature, fix, refactor, docs, chore, etc.?
+
+**Pro tip**: Grep is faster than reading entire files. Use it to quickly assess impact before deciding which files to read in detail.
 
 Commit message guidelines:
 - **MUST FOLLOW THE EXISTING FORMAT**: Match the style, language, and conventions used in recent commits
@@ -177,7 +217,7 @@ async def generate_commit_message(
 Context:
 - Working directory: {repo_path.absolute()}
 - Analysis scope: {"staged changes only (git diff --cached)" if staged_only else "all uncommitted changes (git diff)"}
-- You have access to: Bash, Read, Grep, and Glob tools
+- You have access to: Bash, Read, Grep, Glob, and Edit tools
 
 Your task:
 1. **FIRST**: Check the recent commit history (e.g., `git log -3 --oneline` or `git log -3 --pretty=format:"%s"`) to understand the commit message format/style used in this project
@@ -205,7 +245,12 @@ Recommendations (not requirements - use your judgment):
 - Start with `git log -3 --oneline` to check the commit message style
 - Then use `git status` and `git diff {"--cached" if staged_only else ""}` to see what changed
 - For non-trivial changes, READ the modified files to understand their purpose
-- Use grep to find related code or understand how functions are used
+- **USE GREP extensively** to understand impact and context:
+  * If a function was modified, grep for its usage: `grep -n "function_name("` 
+  * If a class was added/changed, find related classes: `grep -n "class.*Base"` or similar patterns
+  * If imports changed, see where they're used: `grep -n "imported_module"`
+  * To understand scope, count usages: `grep --output_mode count "pattern"`
+  * Get context around matches: `grep -C 3 "pattern"` (3 lines before/after)
 - Consider the broader context of the codebase
 
 When you're confident you understand the changes, output your commit message in this exact format:
@@ -219,7 +264,13 @@ Begin your analysis now.
     try:
         options = ClaudeAgentOptions(
             system_prompt=SYSTEM_PROMPT,
-            allowed_tools=["Bash", "Read", "Grep", "Glob"],
+            allowed_tools=[
+                "Bash",      # Run shell commands
+                "Read",      # Read file contents
+                "Grep",      # Search patterns in files (POWERFUL!)
+                "Glob",      # Find files by pattern
+                "Edit",      # Make precise edits to files (useful for analyzing multi-line changes)
+            ],
             permission_mode="acceptEdits",
             cwd=str(repo_path.absolute()),
             max_turns=10,
