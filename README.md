@@ -68,7 +68,7 @@ For custom Claude API endpoints or proxies, set these environment variables:
 
 ```bash
 # Required: Set custom endpoint and credentials
-export ANTHROPIC_BASE_URL="https://your-endpoint.com/api/v1"
+export ANTHROPIC_BASE_URL="https://your-endpoint.com"
 export ANTHROPIC_AUTH_TOKEN="your-auth-token"
 
 # Optional: Specify custom model name
