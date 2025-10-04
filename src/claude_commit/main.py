@@ -60,8 +60,23 @@ Analysis approach (you decide what's necessary):
 5. Consider the scope: is this a feature, fix, refactor, docs, chore, etc.?
 
 Commit message guidelines:
-- **FOLLOW THE EXISTING FORMAT**: Match the style, language, and conventions used in recent commits
+- **MUST FOLLOW THE EXISTING FORMAT**: Match the style, language, and conventions used in recent commits
 - If no clear pattern exists in history, use conventional commits format (feat:, fix:, docs:, refactor:, test:, chore:, style:, perf:)
+    - feat: for new features
+    - fix: for bug fixes
+    - docs: for documentation changes
+    - refactor: for code refactoring
+    - test: for test changes
+    - chore: for chore changes
+    - style: for style changes
+    - perf: for performance improvements
+    - build: for build changes
+    - ci: for CI/CD changes
+    - revert: for reverting changes
+    - feat!: for breaking changes
+    - fix!: for breaking bug fixes
+    - perf!: for breaking performance improvements
+    - chore!: for breaking chore changes
 - First line: < 50 chars (or follow existing convention), imperative mood, summarize the main change
 - **IMPORTANT**: Use multi-line format with bullet points for detailed changes:
   ```
@@ -77,7 +92,7 @@ Commit message guidelines:
 
 Examples of excellent commit messages (multi-line format):
 
-Conventional commits style:
+Conventional commits style(Remember to follow the existing format):
 ```
 feat: add user authentication system
 
@@ -95,7 +110,7 @@ fix: prevent memory leak in connection pool
 - Improve error handling for failed connections
 ```
 
-With gitmoji:
+With gitmoji,(✨, 🐛, ♻️, etc. ✨ for feature, 🐛 for bug, ♻️ for refactor)
 ```
 ✨ add user authentication system
 

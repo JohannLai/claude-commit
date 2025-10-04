@@ -8,7 +8,7 @@
 
 ## Demo
 
-[![asciicast](https://asciinema.org/a/xxxxx.svg)](https://asciinema.org/a/xxxxx)
+[![asciicast](https://asciinema.org/a/ZubvhPFyP7hPFLsqZiZUc930L.svg)](https://asciinema.org/a/ZubvhPFyP7hPFLsqZiZUc930L?autoplay=1&speed=3)
 
 ## Installation
 
