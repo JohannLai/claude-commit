@@ -117,7 +117,7 @@ Follow this approach (you decide what's necessary based on the changes):
 - If no clear pattern exists in history, use conventional commits format:
   * feat: for new features
   * fix: for bug fixes
-  * docs: for documentation changes
+  * docs: for documentation changes, add .md to the end of the file name
   * refactor: for code refactoring
   * test: for test changes
   * chore: for chore changes
