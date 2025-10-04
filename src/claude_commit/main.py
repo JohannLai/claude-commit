@@ -6,29 +6,28 @@ Analyzes your git repository changes and generates a meaningful commit message
 using Claude's AI capabilities.
 """
 
-import sys
-import asyncio
 import argparse
+import asyncio
+import sys
+import time
 from pathlib import Path
 from typing import Optional
-import time
 
+import pyperclip
+from claude_agent_sdk import (
+    AssistantMessage,
+    ClaudeAgentOptions,
+    CLINotFoundError,
+    ProcessError,
+    ResultMessage,
+    TextBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+    query,
+)
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
-import pyperclip
-
-from claude_agent_sdk import (
-    query,
-    ClaudeAgentOptions,
-    AssistantMessage,
-    TextBlock,
-    ToolUseBlock,
-    ToolResultBlock,
-    ResultMessage,
-    CLINotFoundError,
-    ProcessError,
-)
 
 from .config import Config, resolve_alias
 
@@ -265,11 +264,11 @@ Begin your analysis now.
         options = ClaudeAgentOptions(
             system_prompt=SYSTEM_PROMPT,
             allowed_tools=[
-                "Bash",      # Run shell commands
-                "Read",      # Read file contents
-                "Grep",      # Search patterns in files (POWERFUL!)
-                "Glob",      # Find files by pattern
-                "Edit",      # Make precise edits to files (useful for analyzing multi-line changes)
+                "Bash",  # Run shell commands
+                "Read",  # Read file contents
+                "Grep",  # Search patterns in files (POWERFUL!)
+                "Glob",  # Find files by pattern
+                "Edit",  # Make precise edits to files (useful for analyzing multi-line changes)
             ],
             permission_mode="acceptEdits",
             cwd=str(repo_path.absolute()),
@@ -516,8 +515,8 @@ def handle_alias_command(args):
             print("📋 No aliases configured")
             return
 
-        import platform
         import os
+        import platform
 
         # Detect shell and platform
         shell = os.environ.get("SHELL", "")
@@ -683,8 +682,8 @@ def handle_alias_command(args):
 
     elif args[0] == "uninstall":
         # Remove shell aliases
-        import platform
         import os
+        import platform
 
         shell = os.environ.get("SHELL", "")
 
