@@ -94,13 +94,21 @@ Examples of excellent commit messages (multi-line format):
 
 Conventional commits style(Remember to follow the existing format):
 ```
+# for new features
 feat: add user authentication system
 
 - Implement JWT-based authentication with refresh tokens
 - Add login and registration endpoints
 - Create user session management
 - Add password hashing with bcrypt
-```
+
+# for bug fixes
+fix: correct formatting issue
+
+- Preserve empty lines in commit messages
+
+# for document changes
+docs: update README.md
 
 ```
 fix: prevent memory leak in connection pool
