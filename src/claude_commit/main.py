@@ -302,7 +302,7 @@ Begin your analysis now.
             ],
             permission_mode="acceptEdits",
             cwd=str(repo_path.absolute()),
-            max_turns=10,
+            max_turns=30,
         )
 
         if verbose:
