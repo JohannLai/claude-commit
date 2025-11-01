@@ -1,0 +1,24 @@
+#!/bin/bash
+# Auto-generate commit message using claude-commit
+
+COMMIT_MSG_FILE=$1
+COMMIT_SOURCE=$2
+
+# Only run for normal commits (not merge, squash, etc.)
+if [ -z "$COMMIT_SOURCE" ]; then
+    echo "🤖 Generating commit message with Claude..."
+    
+    # Generate commit message and save to temp file
+    claude-commit --preview 2>/dev/null | sed -n '/┌/,/└/p' | sed '1d;$d' | sed 's/^[│ ]*//' | sed '/^$/d' | sed '/Preview complete/d' | sed '/Generated Commit Message/d' > /tmp/claude-commit-msg.txt
+    
+    # Check if message was generated successfully
+    if [ -s /tmp/claude-commit-msg.txt ]; then
+        cat /tmp/claude-commit-msg.txt > "$COMMIT_MSG_FILE"
+        rm -f /tmp/claude-commit-msg.txt
+        echo "✅ Commit message generated! You can edit it in the editor."
+    else
+        echo "⚠️  Failed to generate message, using default."
+        rm -f /tmp/claude-commit-msg.txt
+    fi
+fi
+
