@@ -480,6 +480,12 @@ Begin your analysis now.
 
         return commit_message
 
+    except KeyboardInterrupt:
+        # Handle Ctrl+C gracefully without showing traceback
+        if "progress" in locals() and progress is not None:
+            progress.stop()
+        # Don't print anything here - let main() handle the user message
+        return None
     except CLINotFoundError:
         # Stop progress on error
         if "progress" in locals() and progress is not None:
