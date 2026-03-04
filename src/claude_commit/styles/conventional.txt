@@ -1,0 +1,40 @@
+Use conventional commits format for the commit message. Do NOT check git history for style detection — use this style instead.
+
+Format:
+  type: brief summary (< 50 chars)
+
+  - Detail about change 1
+  - Detail about change 2
+
+Allowed types:
+  feat:     New feature
+  fix:      Bug fix
+  docs:     Documentation only
+  refactor: Code refactoring (no feature/fix)
+  test:     Adding or updating tests
+  chore:    Maintenance, dependencies, tooling
+  style:    Code style / formatting
+  perf:     Performance improvement
+  build:    Build system or external dependencies
+  ci:       CI/CD configuration
+  revert:   Reverting a previous commit
+
+For breaking changes, append ! after the type (e.g., feat!:, fix!:).
+
+Examples:
+  feat: add user authentication system
+
+  - Implement JWT-based authentication with refresh tokens
+  - Add login and registration endpoints
+
+  fix: prevent memory leak in connection pool
+
+  - Close idle connections after timeout
+  - Add connection limit configuration
+
+Rules:
+- First line must be < 50 characters
+- Use imperative mood ("add", not "added" or "adds")
+- Be specific and meaningful
+- Focus on WHAT changed and WHY, not HOW
+- Always include bullet-point details for non-trivial changes
