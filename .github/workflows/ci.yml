@@ -52,8 +52,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
+          pip install -e ".[dev]"
 
       - name: Test installation
         run: |
           claude-commit --help
+
+      - name: Run tests
+        run: pytest tests/ -v

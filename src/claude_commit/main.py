@@ -35,6 +35,74 @@ console = Console()
 error_console = Console(stderr=True)
 
 
+def extract_commit_message(all_text: list) -> Optional[str]:
+    """Extract commit message from collected AI response text blocks.
+
+    Looks for the COMMIT_MESSAGE: marker first. Falls back to using the last
+    text block that doesn't start with an explanatory prefix.
+
+    Args:
+        all_text: List of text blocks from the AI response.
+
+    Returns:
+        Extracted commit message or None.
+    """
+    full_response = "\n".join(all_text)
+    commit_message = None
+
+    if "COMMIT_MESSAGE:" in full_response:
+        parts = full_response.split("COMMIT_MESSAGE:", 1)
+        if len(parts) > 1:
+            commit_message = parts[1].strip()
+    else:
+        for text in reversed(all_text):
+            text = text.strip()
+            if text and not any(
+                text.lower().startswith(prefix)
+                for prefix in [
+                    "let me",
+                    "i'll",
+                    "i will",
+                    "now i",
+                    "first",
+                    "i can see",
+                ]
+            ):
+                commit_message = text
+                break
+
+    if commit_message:
+        commit_message = clean_markdown_fences(commit_message)
+
+    return commit_message
+
+
+def clean_markdown_fences(text: str) -> str:
+    """Remove markdown code block fences from text, keeping content outside fences.
+
+    Lines starting with ``` toggle a "code block" state. Lines inside code blocks
+    are dropped; lines outside are kept.
+
+    Args:
+        text: Text potentially containing markdown code fences.
+
+    Returns:
+        Cleaned text with fences and their content removed.
+    """
+    lines = text.split("\n")
+    cleaned_lines = []
+    in_code_block = False
+
+    for line in lines:
+        if line.strip().startswith("```"):
+            in_code_block = not in_code_block
+            continue
+        if not in_code_block:
+            cleaned_lines.append(line.rstrip())
+
+    return "\n".join(cleaned_lines).strip()
+
+
 SYSTEM_PROMPT = """You are an expert software engineer tasked with analyzing code changes and writing excellent git commit messages.
 
 <goal>
@@ -432,48 +500,7 @@ Begin your analysis now.
                     console.print(f"[cyan]🔄 Turns: {message.num_turns}[/cyan]")
 
                 if not message.is_error:
-                    # Extract commit message from COMMIT_MESSAGE: marker
-                    full_response = "\n".join(all_text)
-
-                    # Look for COMMIT_MESSAGE: marker
-                    if "COMMIT_MESSAGE:" in full_response:
-                        # Extract everything after COMMIT_MESSAGE:
-                        parts = full_response.split("COMMIT_MESSAGE:", 1)
-                        if len(parts) > 1:
-                            commit_message = parts[1].strip()
-                    else:
-                        # Fallback: try to extract the last meaningful text block
-                        # Skip explanatory text and get the actual commit message
-                        for text in reversed(all_text):
-                            text = text.strip()
-                            if text and not any(
-                                text.lower().startswith(prefix)
-                                for prefix in [
-                                    "let me",
-                                    "i'll",
-                                    "i will",
-                                    "now i",
-                                    "first",
-                                    "i can see",
-                                ]
-                            ):
-                                commit_message = text
-                                break
-
-                    # Clean up markdown code blocks if present
-                    if commit_message:
-                        lines = commit_message.split("\n")
-                        cleaned_lines = []
-                        in_code_block = False
-
-                        for line in lines:
-                            if line.strip().startswith("```"):
-                                in_code_block = not in_code_block
-                                continue
-                            if not in_code_block:
-                                cleaned_lines.append(line.rstrip())
-
-                        commit_message = "\n".join(cleaned_lines).strip()
+                    commit_message = extract_commit_message(all_text)
 
         # Make sure progress is stopped before returning
         if progress is not None and task_id is not None:
