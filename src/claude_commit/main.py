@@ -32,6 +32,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from .config import Config, resolve_alias
 
 console = Console()
+error_console = Console(stderr=True)
 
 
 SYSTEM_PROMPT = """You are an expert software engineer tasked with analyzing code changes and writing excellent git commit messages.
@@ -490,23 +491,22 @@ Begin your analysis now.
         # Stop progress on error
         if "progress" in locals() and progress is not None:
             progress.stop()
-        console.print("[red]❌ Error: Claude Code CLI not found.[/red]", file=sys.stderr)
-        console.print(
-            "[yellow]📦 Please install it: npm install -g @anthropic-ai/claude-code[/yellow]",
-            file=sys.stderr,
+        error_console.print("[red]❌ Error: Claude Code CLI not found.[/red]")
+        error_console.print(
+            "[yellow]📦 Please install it: npm install -g @anthropic-ai/claude-code[/yellow]"
         )
         return None
     except ProcessError as e:
         if "progress" in locals() and progress is not None:
             progress.stop()
-        console.print(f"[red]❌ Process error: {e}[/red]", file=sys.stderr)
+        error_console.print(f"[red]❌ Process error: {e}[/red]")
         if e.stderr:
-            console.print(f"   stderr: {e.stderr}", file=sys.stderr)
+            error_console.print(f"   stderr: {e.stderr}")
         return None
     except Exception as e:
         if "progress" in locals() and progress is not None:
             progress.stop()
-        console.print(f"[red]❌ Unexpected error: {e}[/red]", file=sys.stderr)
+        error_console.print(f"[red]❌ Unexpected error: {e}[/red]")
         if verbose:
             import traceback
 
@@ -947,11 +947,11 @@ Alias Management:
             )
         )
     except KeyboardInterrupt:
-        console.print("\n[yellow]⚠️  Interrupted by user[/yellow]", file=sys.stderr)
+        error_console.print("\n[yellow]⚠️  Interrupted by user[/yellow]")
         sys.exit(130)
 
     if not commit_message:
-        console.print("[red]❌ Failed to generate commit message[/red]", file=sys.stderr)
+        error_console.print("[red]❌ Failed to generate commit message[/red]")
         sys.exit(1)
 
     # Display the generated message with rich formatting
@@ -975,8 +975,8 @@ Alias Management:
             pyperclip.copy(commit_message)
             console.print("\n[green]✅ Commit message copied to clipboard![/green]")
         except Exception as e:
-            console.print(
-                f"\n[yellow]⚠️  Failed to copy to clipboard: {e}[/yellow]", file=sys.stderr
+            error_console.print(
+                f"\n[yellow]⚠️  Failed to copy to clipboard: {e}[/yellow]"
             )
 
     if args.commit:
@@ -1004,12 +1004,12 @@ Alias Management:
             if result.stdout:
                 console.print(result.stdout)
         except subprocess.CalledProcessError as e:
-            console.print(f"\n[red]❌ Failed to commit: {e}[/red]", file=sys.stderr)
+            error_console.print(f"\n[red]❌ Failed to commit: {e}[/red]")
             if e.stderr:
-                console.print(e.stderr, file=sys.stderr)
+                error_console.print(e.stderr)
             sys.exit(1)
         except Exception as e:
-            console.print(f"\n[red]❌ Unexpected error during commit: {e}[/red]", file=sys.stderr)
+            error_console.print(f"\n[red]❌ Unexpected error during commit: {e}[/red]")
             sys.exit(1)
     else:
         # Default: just show the command
