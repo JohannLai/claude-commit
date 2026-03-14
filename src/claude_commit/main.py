@@ -526,6 +526,9 @@ Begin your analysis now.
     except ProcessError as e:
         if "progress" in locals() and progress is not None:
             progress.stop()
+        # If we already extracted a commit message, return it despite the process error
+        if commit_message:
+            return commit_message
         error_console.print(f"[red]❌ Process error: {e}[/red]")
         if e.stderr:
             error_console.print(f"   stderr: {e.stderr}")
@@ -533,6 +536,10 @@ Begin your analysis now.
     except Exception as e:
         if "progress" in locals() and progress is not None:
             progress.stop()
+        # If we already extracted a commit message, return it despite the error
+        # (the SDK sometimes raises after the CLI has already completed successfully)
+        if commit_message:
+            return commit_message
         error_console.print(f"[red]❌ Unexpected error: {e}[/red]")
         if verbose:
             import traceback
