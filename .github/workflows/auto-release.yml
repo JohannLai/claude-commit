@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+concurrency:
+  group: auto-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   auto-release:
@@ -24,6 +29,9 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch tags
+        run: git fetch --force --tags origin
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -143,8 +151,23 @@ jobs:
           git commit -m "chore: bump version to $NEW_VERSION [skip-ci][skip-release]" || exit 0
           git push
 
-      - name: Create and push tag
+      - name: Check if tag exists
         if: steps.version_bump.outputs.bump_type != 'none'
+        id: tag_check
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+
+          if git rev-parse "v$NEW_VERSION" >/dev/null 2>&1 || \
+             git ls-remote --exit-code --tags origin "refs/tags/v$NEW_VERSION" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag v$NEW_VERSION already exists"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Tag v$NEW_VERSION does not exist yet"
+          fi
+
+      - name: Create and push tag
+        if: steps.version_bump.outputs.bump_type != 'none' && steps.tag_check.outputs.exists != 'true'
         run: |
           NEW_VERSION="${{ steps.new_version.outputs.version }}"
           git tag -a "v$NEW_VERSION" -m "Release version $NEW_VERSION"
@@ -175,8 +198,24 @@ jobs:
           echo "Generated release notes"
           cat release_notes.md
 
-      - name: Create GitHub Release
+      - name: Check if GitHub release exists
         if: steps.version_bump.outputs.bump_type != 'none'
+        id: release_check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+
+          if gh release view "v$NEW_VERSION" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "GitHub release v$NEW_VERSION already exists"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "GitHub release v$NEW_VERSION does not exist yet"
+          fi
+
+      - name: Create GitHub Release
+        if: steps.version_bump.outputs.bump_type != 'none' && steps.release_check.outputs.exists != 'true'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
