@@ -6,10 +6,6 @@
 
 `claude-commit` uses Claude AI to analyze your code changes and write meaningful commit messages. Claude reads your files, understands the context, and generates commit messages following best practices.
 
-## Demo
-
-[![asciicast](https://asciinema.org/a/ZubvhPFyP7hPFLsqZiZUc930L.svg)](https://asciinema.org/a/ZubvhPFyP7hPFLsqZiZUc930L?autoplay=1&speed=3)
-
 ## Installation
 
 ### Prerequisites
@@ -152,12 +148,12 @@ claude-commit alias unset quick
 
 ## How It Works
 
-Claude autonomously analyzes your changes:
+Claude autonomously analyzes your changes using [subagents](https://platform.claude.com/docs/agent-sdk/subagents) for parallel analysis:
 
-1. **Reads** your modified files to understand context
-2. **Searches** the codebase for related code
-3. **Understands** the intent and impact of changes
-4. **Generates** a clear commit message following conventions
+1. **Detects style** — a lightweight subagent checks git history for commit conventions (conventional commits, gitmoji, language, etc.)
+2. **Analyzes changes** — a dedicated subagent reads modified files, searches for context, and understands the intent
+3. **Runs in parallel** — both subagents execute concurrently for faster results
+4. **Generates** a clear commit message combining style and change analysis
 
 **Example:**
 ```

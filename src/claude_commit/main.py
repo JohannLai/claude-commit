@@ -15,6 +15,7 @@ from typing import Optional
 
 import pyperclip
 from claude_agent_sdk import (
+    AgentDefinition,
     AssistantMessage,
     ClaudeAgentOptions,
     CLINotFoundError,
@@ -150,6 +151,20 @@ You have access to these tools for analyzing the codebase:
 
 **Pro tip**: Grep is faster than reading entire files. Use it to quickly assess impact before deciding which files to read in detail.
 </available_tools>
+
+<subagents>
+You have access to specialized subagents via the **Task** tool. Use them to parallelize your analysis for faster results.
+
+Available subagents:
+- **style-detector**: Detects commit message style/conventions from git history. Use this to check commit style while you analyze changes in parallel.
+- **diff-analyzer**: Deep-dives into code changes, reads files, greps for context. Use this for understanding complex or large diffs.
+
+**Parallelization strategy**: When analyzing a repository, launch subagents in parallel to speed things up. For example:
+- Launch `style-detector` AND `diff-analyzer` simultaneously in a single response
+- Combine their results to generate the final commit message
+
+To invoke a subagent, use the Task tool with `subagent_type` set to the agent name.
+</subagents>
 
 <analysis_approach>
 Follow this approach (you decide what's necessary based on the changes):
@@ -368,7 +383,43 @@ Begin your analysis now.
                 "Grep",  # Search patterns in files (POWERFUL!)
                 "Glob",  # Find files by pattern
                 "Edit",  # Make precise edits to files (useful for analyzing multi-line changes)
+                "Task",  # Invoke subagents for parallel analysis
             ],
+            agents={
+                "style-detector": AgentDefinition(
+                    description="Detect commit message style and conventions from git history. Use this to determine the project's commit format (conventional commits, gitmoji, language, etc.) by examining recent commits.",
+                    prompt="""You are a commit style detector. Your ONLY job is to analyze the git commit history and report the style conventions used.
+
+Steps:
+1. Run: git log -10 --oneline
+2. Analyze the output for:
+   - Format: conventional commits (feat:, fix:), gitmoji, plain text, etc.
+   - Language: English, Chinese, or other
+   - Emoji usage: gitmoji style or none
+   - Any other patterns (scope, capitalization, etc.)
+
+Output a concise summary of the detected style, for example:
+"Conventional commits format, English, no emoji. Example: feat: add user auth"
+""",
+                    tools=["Bash"],
+                    model="haiku",
+                ),
+                "diff-analyzer": AgentDefinition(
+                    description="Deep-dive into code changes to understand what changed and why. Use this for analyzing complex or large diffs, reading modified files, and understanding code relationships.",
+                    prompt="""You are a code change analyzer. Your job is to deeply understand what changed in the repository and WHY.
+
+Steps:
+1. Run git status and git diff (or git diff --cached for staged changes) to see what changed
+2. For significant changes, READ the modified files to understand context
+3. Use GREP to understand code relationships (where functions are called, imports, etc.)
+4. Summarize: what changed, why it changed, and the impact
+
+Output a clear, structured summary of the changes suitable for writing a commit message.
+""",
+                    tools=["Bash", "Read", "Grep", "Glob"],
+                    model="sonnet",
+                ),
+            },
             permission_mode="acceptEdits",
             cwd=str(repo_path.absolute()),
             max_turns=30,
