@@ -1009,9 +1009,7 @@ Alias Management:
             pyperclip.copy(commit_message)
             console.print("\n[green]✅ Commit message copied to clipboard![/green]")
         except Exception as e:
-            error_console.print(
-                f"\n[yellow]⚠️  Failed to copy to clipboard: {e}[/yellow]"
-            )
+            error_console.print(f"\n[yellow]⚠️  Failed to copy to clipboard: {e}[/yellow]")
 
     if args.commit:
         try:
