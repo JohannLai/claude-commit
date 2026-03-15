@@ -1,0 +1,24 @@
+Use a simple, plain commit message style. Do NOT check git history for style detection — use this style instead.
+
+Format:
+  A single line summarizing the change, optionally followed by bullet points for details.
+
+Rules:
+- No type prefix (no "feat:", "fix:", etc.)
+- No gitmoji or emojis
+- First line < 72 characters
+- Use imperative mood ("Add", not "Added" or "Adds")
+- Capitalize the first word
+- No period at the end of the subject line
+- Be specific and meaningful
+- For non-trivial changes, add bullet-point details after a blank line
+
+Examples:
+  Add user authentication system
+
+  - Implement JWT-based authentication with refresh tokens
+  - Add login and registration endpoints
+
+  Fix memory leak in connection pool
+
+  Update README with installation instructions

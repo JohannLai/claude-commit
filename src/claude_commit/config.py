@@ -106,6 +106,96 @@ class Config:
         """List all aliases"""
         return self.aliases.copy()
 
+    # --- Style management ---
+
+    def get_style(self) -> Optional[str]:
+        """Returns the configured default style name, or None (auto-detect)"""
+        return self._config.get("style")
+
+    def set_style(self, style: str):
+        """Validate that the style exists, then save to config"""
+        available = self.list_styles()
+        if style not in available:
+            raise ValueError(
+                f"Style '{style}' not found. Available: {', '.join(sorted(available))}"
+            )
+        self._config["style"] = style
+        self._save_config()
+
+    def clear_style(self):
+        """Remove style key, revert to auto-detect"""
+        self._config.pop("style", None)
+        self._save_config()
+
+    def list_styles(self) -> Dict[str, str]:
+        """Return {name: path} for all available styles (user styles override bundled)"""
+        styles: Dict[str, str] = {}
+
+        # Bundled styles first
+        bundled_dir = self.get_bundled_styles_dir()
+        if bundled_dir.is_dir():
+            for f in sorted(bundled_dir.glob("*.txt")):
+                styles[f.stem] = str(f)
+
+        # User styles override bundled
+        user_dir = self.get_user_styles_dir()
+        if user_dir.is_dir():
+            for f in sorted(user_dir.glob("*.txt")):
+                styles[f.stem] = str(f)
+
+        return styles
+
+    def get_style_content(self, name: str) -> Optional[str]:
+        """Resolve style name to file, read and return its content"""
+        styles = self.list_styles()
+        path = styles.get(name)
+        if path is None:
+            return None
+        return Path(path).read_text(encoding="utf-8")
+
+    def get_user_styles_dir(self) -> Path:
+        """Return ~/.claude-commit/styles/"""
+        return Path.home() / ".claude-commit" / "styles"
+
+    def get_bundled_styles_dir(self) -> Path:
+        """Return the bundled styles directory"""
+        return Path(__file__).parent / "styles"
+
+    def create_custom_style(self, name: str) -> Path:
+        """Create a template style file at ~/.claude-commit/styles/<name>.txt"""
+        if not name or "/" in name or "\\" in name or ".." in name:
+            raise ValueError(f"Invalid style name: '{name}'")
+        dest = self.get_user_styles_dir() / f"{name}.txt"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if dest.exists():
+            raise FileExistsError(f"Style '{name}' already exists at {dest}")
+        template = (
+            f"# Custom style: {name}\n"
+            "# Edit this file to define your commit message style.\n"
+            "# Do NOT check git history for style detection — use this style instead.\n"
+            "\n"
+            "# Describe the format, rules, and examples for your preferred commit messages.\n"
+            "# Everything in this file will be injected as style instructions.\n"
+        )
+        dest.write_text(template, encoding="utf-8")
+        return dest
+
+    def delete_custom_style(self, name: str) -> bool:
+        """Delete a user style file. Returns True if deleted."""
+        user_dir = self.get_user_styles_dir()
+        target = user_dir / f"{name}.txt"
+        if target.is_file():
+            target.unlink()
+            return True
+        return False
+
+    def is_bundled_style(self, name: str) -> bool:
+        """Check if a style name is a bundled (non-deletable) style"""
+        bundled_dir = self.get_bundled_styles_dir()
+        return (bundled_dir / f"{name}.txt").is_file()
+
+    # --- First-run helpers ---
+
     def is_first_run(self) -> bool:
         """Check if this is the first run"""
         return not self.config_path.exists()

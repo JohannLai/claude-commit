@@ -289,6 +289,7 @@ async def generate_commit_message(
     staged_only: bool = True,
     verbose: bool = False,
     max_diff_lines: int = 5000,
+    style_prompt: Optional[str] = None,
 ) -> Optional[str]:
     """
     Generate a commit message based on current git changes.
@@ -298,6 +299,7 @@ async def generate_commit_message(
         staged_only: Only analyze staged changes (git diff --cached)
         verbose: Print detailed information
         max_diff_lines: Maximum number of diff lines to analyze
+        style_prompt: Optional style instructions to override auto-detect
 
     Returns:
         Generated commit message or None if failed
@@ -310,7 +312,34 @@ async def generate_commit_message(
             f"[blue]📝 Mode:[/blue] {'staged changes only' if staged_only else 'all changes'}"
         )
 
+    # Build system prompt, optionally with style override
+    effective_system_prompt = SYSTEM_PROMPT
+    if style_prompt:
+        effective_system_prompt += f"""
+
+<style_override>
+The user has configured an explicit commit message style. Follow these style instructions EXACTLY and do NOT check git history for style detection.
+
+{style_prompt}
+</style_override>
+"""
+
     # Build the analysis prompt - give AI freedom to explore
+    if style_prompt:
+        step1 = (
+            "1. **Use the configured style** — an explicit style has been provided in "
+            "the system prompt. Do NOT check git history for style. Follow the style "
+            "instructions exactly."
+        )
+    else:
+        step1 = (
+            "1. **Check commit history style** (choose ONE approach):\n"
+            "   - Run `git log -3 --oneline` to see recent commits\n"
+            "   - This shows you: gitmoji usage, language (Chinese/English), "
+            "format (conventional commits, etc.)\n"
+            "   - **MUST follow the same style/format/language as existing commits**"
+        )
+
     prompt = f"""Analyze the git repository changes and generate an excellent commit message.
 
 <context>
@@ -323,10 +352,7 @@ async def generate_commit_message(
 <task>
 Follow these steps to generate an excellent commit message:
 
-1. **Check commit history style** (choose ONE approach):
-   - Run `git log -3 --oneline` to see recent commits
-   - This shows you: gitmoji usage, language (Chinese/English), format (conventional commits, etc.)
-   - **MUST follow the same style/format/language as existing commits**
+{step1}
 
 2. **Analyze the changes**:
    - Run `git status` to see which files changed
@@ -376,7 +402,7 @@ Begin your analysis now.
 """
     try:
         options = ClaudeAgentOptions(
-            system_prompt=SYSTEM_PROMPT,
+            system_prompt=effective_system_prompt,
             allowed_tools=[
                 "Bash",  # Run shell commands
                 "Read",  # Read file contents
@@ -895,6 +921,125 @@ def handle_alias_command(args):
         sys.exit(1)
 
 
+def handle_style_command(args):
+    """Handle style management subcommands"""
+    config = Config()
+
+    if len(args) == 0 or args[0] == "list":
+        styles = config.list_styles()
+        current = config.get_style()
+        bundled_dir = config.get_bundled_styles_dir()
+
+        if not styles:
+            print("📋 No styles available")
+            return
+
+        print("📋 Available commit message styles:")
+        print()
+        for name, path in sorted(styles.items()):
+            source = "(built-in)" if Path(path).is_relative_to(bundled_dir) else "(custom)"
+            marker = " ← default" if name == current else ""
+            print(f"  {name:<20} {source}{marker}")
+
+        print()
+        if current:
+            print(f"💡 Current default: {current}")
+        else:
+            print("💡 No default style set (auto-detect from git history)")
+        print()
+        print("   Set default:   claude-commit style set <name>")
+        print("   Override once:  claude-commit --style <name>")
+        print("   Create custom:  claude-commit style create <name>")
+
+    elif args[0] == "show":
+        if len(args) < 2:
+            print("❌ Error: Please provide a style name", file=sys.stderr)
+            print("   Usage: claude-commit style show <name>", file=sys.stderr)
+            sys.exit(1)
+
+        name = args[1]
+        content = config.get_style_content(name)
+        if content is None:
+            print(f"❌ Style '{name}' not found", file=sys.stderr)
+            print("   Run 'claude-commit style list' to see available styles", file=sys.stderr)
+            sys.exit(1)
+
+        styles = config.list_styles()
+        path = styles[name]
+        print(f"📄 Style: {name} ({path})")
+        print()
+        print(content)
+
+    elif args[0] == "set":
+        if len(args) < 2:
+            print("❌ Error: Please provide a style name", file=sys.stderr)
+            print("   Usage: claude-commit style set <name>", file=sys.stderr)
+            sys.exit(1)
+
+        name = args[1]
+        try:
+            config.set_style(name)
+            print(f"✅ Default style set to '{name}'")
+        except ValueError as e:
+            print(f"❌ {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif args[0] == "clear":
+        config.clear_style()
+        print("✅ Default style cleared (reverted to auto-detect)")
+
+    elif args[0] == "create":
+        if len(args) < 2:
+            print("❌ Error: Please provide a style name", file=sys.stderr)
+            print("   Usage: claude-commit style create <name>", file=sys.stderr)
+            sys.exit(1)
+
+        name = args[1]
+        try:
+            path = config.create_custom_style(name)
+            print(f"✅ Created style template: {path}")
+            print()
+            print("   Edit the file to define your commit message style, then:")
+            print(f"   claude-commit style set {name}")
+        except FileExistsError as e:
+            print(f"❌ {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif args[0] == "delete":
+        if len(args) < 2:
+            print("❌ Error: Please provide a style name", file=sys.stderr)
+            print("   Usage: claude-commit style delete <name>", file=sys.stderr)
+            sys.exit(1)
+
+        name = args[1]
+        if config.is_bundled_style(name):
+            # Check if there's also a user override
+            user_file = config.get_user_styles_dir() / f"{name}.txt"
+            if user_file.is_file():
+                user_file.unlink()
+                print(f"✅ Deleted user override for '{name}' (built-in version remains)")
+            else:
+                print(f"❌ Cannot delete built-in style '{name}'", file=sys.stderr)
+                sys.exit(1)
+        elif config.delete_custom_style(name):
+            # Clear default if this was the default
+            if config.get_style() == name:
+                config.clear_style()
+                print(f"✅ Deleted style '{name}' and cleared default (reverted to auto-detect)")
+            else:
+                print(f"✅ Deleted style '{name}'")
+        else:
+            print(f"❌ Style '{name}' not found in user styles", file=sys.stderr)
+            sys.exit(1)
+
+    else:
+        print(f"❌ Unknown style command: {args[0]}", file=sys.stderr)
+        print(
+            "   Available commands: list, show, set, clear, create, delete", file=sys.stderr
+        )
+        sys.exit(1)
+
+
 def show_first_run_tip():
     """Show helpful tip on first run"""
     welcome_text = """[bold]👋 Welcome to claude-commit![/bold]
@@ -918,13 +1063,17 @@ def main():
     """Main CLI entry point."""
     # Check if this is the first run
     config = Config()
-    if config.is_first_run() and len(sys.argv) > 1 and sys.argv[1] not in ["alias", "-h", "--help"]:
+    if config.is_first_run() and len(sys.argv) > 1 and sys.argv[1] not in ["alias", "style", "-h", "--help"]:
         show_first_run_tip()
         config.mark_first_run_complete()
 
-    # Check if first argument is 'alias' command
+    # Check if first argument is 'alias' or 'style' command
     if len(sys.argv) > 1 and sys.argv[1] == "alias":
         handle_alias_command(sys.argv[2:])
+        return
+
+    if len(sys.argv) > 1 and sys.argv[1] == "style":
+        handle_style_command(sys.argv[2:])
         return
 
     # Resolve any aliases in the arguments
@@ -974,6 +1123,22 @@ Alias Management:
   # Use an alias (after install)
   cca           (expands to: claude-commit --all)
   ccc           (expands to: claude-commit --commit)
+
+Style Management:
+  # List available styles
+  claude-commit style list
+
+  # Set default commit message style
+  claude-commit style set conventional
+
+  # Override style for a single run
+  claude-commit --style simple
+
+  # Create a custom style
+  claude-commit style create my-team
+
+  # Revert to auto-detect from git history
+  claude-commit style clear
         """,
     )
 
@@ -1018,8 +1183,32 @@ Alias Management:
         action="store_true",
         help="Just preview the message without any action",
     )
+    parser.add_argument(
+        "-s",
+        "--style",
+        type=str,
+        default=None,
+        help="Commit message style to use (overrides config default). See: claude-commit style list",
+    )
 
     args = parser.parse_args(resolved_args)
+
+    # Resolve style: CLI --style > config default > None (auto-detect)
+    style_name = args.style if args.style is not None else config.get_style()
+    style_prompt = None
+    if style_name:
+        style_prompt = config.get_style_content(style_name)
+        if style_prompt is None:
+            console.print(
+                f"[red]❌ Style '{style_name}' not found.[/red]", file=sys.stderr
+            )
+            console.print(
+                "[yellow]   Run 'claude-commit style list' to see available styles.[/yellow]",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if args.verbose:
+            console.print(f"[blue]🎨 Using style:[/blue] {style_name}")
 
     # Run async function
     try:
@@ -1029,6 +1218,7 @@ Alias Management:
                 staged_only=not args.all,
                 verbose=args.verbose,
                 max_diff_lines=args.max_diff_lines,
+                style_prompt=style_prompt,
             )
         )
     except KeyboardInterrupt:

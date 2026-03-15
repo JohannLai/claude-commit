@@ -43,6 +43,9 @@ claude-commit = "claude_commit.main:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+claude_commit = ["styles/*.txt"]
+
 [tool.black]
 line-length = 100
 target-version = ['py39']
